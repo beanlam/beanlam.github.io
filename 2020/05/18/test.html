@@ -1,0 +1,69 @@
+<html>
+<head>
+
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+
+    <link href="/main.css" rel="stylesheet" type="text/css">
+<!--    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">-->
+<!--    <link rel="shortcut icon" href="https://www.yinwang.org/images/Yc.jpg">-->
+
+    <title>beanlam 的测试文章</title>
+    
+</head>
+
+<body>
+<script>
+    if (/mobile/i.test(navigator.userAgent) || /android/i.test(navigator.userAgent))
+    {
+        document.body.classList.add('mobile');
+    }
+</script>
+
+<div class="inner">
+    <h1>beanlam 的测试文章</h1>
+    <h1 id="helloworld">Hello World</h1>
+<p>这是一段正文，下面是一些列表</p>
+<ul>
+<li>项目一</li>
+<li>项目二</li>
+<li>项目三</li>
+</ul>
+<h2 id="耳机标题">耳机标题</h2>
+<p>PHP 是世界上<strong>最好</strong>的语言</p>
+<h3 id="三级标题">三级标题</h3>
+<p>来段代码码好吗</p>
+<pre><code>	private static void renderPostPage(List&lt;Article&gt; articles, IRenderable render, String destination) throws RenderException {
+		String postTemplatePath = &quot;template/template.post.html&quot;;
+
+		for (final Article article : articles) {
+			String postDestinationPath = article.getRelativePath();
+			Map&lt;String, Object&gt; bindings = new HashMap&lt;&gt;();
+			bindings.put(&quot;article&quot;, article);
+			render.render(postTemplatePath, bindings, destination + File.separator +  postDestinationPath);
+		}
+	}
+
+</code></pre>
+<h4 id="四级标题是什么样呢">四级标题是什么样呢</h4>
+<p><img src="/2020/05/18/test.assets/board.png" alt="一张图片" /></p>
+
+</div>
+
+<!--
+<div class="ad-banner" style="margin-top: 5px">
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <ins class="adsbygoogle"
+            style="display:inline-block;width:100%;height:90px"
+            data-ad-client="ca-pub-1331524016319584"
+            data-ad-slot="6657867155"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+
+<script data-ad-client="ca-pub-1331524016319584" async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+</script>
+-->
+</body>
+
+</html>
