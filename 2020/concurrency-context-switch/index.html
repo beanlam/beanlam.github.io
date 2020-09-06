@@ -12,7 +12,7 @@
   
   
   
-  <link rel="canonical" href="/2020/concurrency-context-switch/" />
+  <link rel="canonical" href="www.beanlam.me/2020/concurrency-context-switch/" />
   <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -30,8 +30,8 @@
   <meta name="title" content="多线程与上下文切换 | beanlam">
     
   
-  <link rel="stylesheet" href="/font/iconfont.css">
-  <link rel="stylesheet" href="/css/main.min.css">
+  <link rel="stylesheet" href="/www.beanlam.me/font/iconfont.css">
+  <link rel="stylesheet" href="/www.beanlam.me/css/main.min.css">
 
 
   <meta name="twitter:card" content="summary"/>
@@ -50,18 +50,18 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
   "headline": "多线程与上下文切换",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "\/2020\/concurrency-context-switch\/"
+    "@id": "www.beanlam.me\/2020\/concurrency-context-switch\/"
   },
   "image": {
     "@type": "ImageObject",
-    "url": "images\/me\/avatar.jpg",
+    "url": "www.beanlam.me\/images\/me\/avatar.jpg",
     "width":  800 ,
     "height":  600 
   },
   "genre": "posts",
   
   "wordcount":  252 ,
-  "url": "\/2020\/concurrency-context-switch\/",
+  "url": "www.beanlam.me\/2020\/concurrency-context-switch\/",
   "datePublished": "2020-09-06T13:27:05\u002b08:00",
   "dateModified": "2020-09-06T13:27:05\u002b08:00",
   
@@ -70,7 +70,7 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
     "name": "beanlam",
     "logo": {
       "@type": "ImageObject",
-      "url": "images\/me\/avatar.jpg",
+      "url": "www.beanlam.me\/images\/me\/avatar.jpg",
       "width":  127 ,
       "height":  40 
     }
@@ -93,16 +93,16 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
         <nav class="navbar">
     <div class="container">
         <div class="navbar-header header-logo">
-        	<a href="">beanlam</a>
+        	<a href="www.beanlam.me">beanlam</a>
         </div>
         <div class="menu navbar-right">
                 
                 
-                <a class="menu-item" href="/posts/" title="">posts</a>
+                <a class="menu-item" href="www.beanlam.me/posts/" title="">posts</a>
                 
-                <a class="menu-item" href="/categories/" title="">categories</a>
+                <a class="menu-item" href="www.beanlam.me/categories/" title="">categories</a>
                 
-                <a class="menu-item" href="/about" title="">about</a>
+                <a class="menu-item" href="www.beanlam.me/about" title="">about</a>
                 
                 <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
         </div>
@@ -111,7 +111,7 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
 <nav class="navbar-mobile" id="nav-mobile" style="display: none">
      <div class="container">
         <div class="navbar-header">
-            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="www.beanlam.me">beanlam</a></div>
             <div class="menu-toggle">
                 <span></span><span></span><span></span>
             </div>
@@ -120,11 +120,11 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
           <div class="menu" id="mobile-menu">
                 
                 
-                <a class="menu-item" href="/posts/" title="">posts</a>
+                <a class="menu-item" href="www.beanlam.me/posts/" title="">posts</a>
                 
-                <a class="menu-item" href="/categories/" title="">categories</a>
+                <a class="menu-item" href="www.beanlam.me/categories/" title="">categories</a>
                 
-                <a class="menu-item" href="/about" title="">about</a>
+                <a class="menu-item" href="www.beanlam.me/about" title="">about</a>
                 
         </div>
     </div>
@@ -137,14 +137,14 @@ CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行�
     <header class="post-header">
         <h1 class="post-title">多线程与上下文切换</h1>
         <div class="post-meta">
-            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+            本文 由 <a href="www.beanlam.me" rel="author">beanlam</a> 用一粒心 ♥ 
                 <span class="post-time">
                     写于 <time datetime=2020-09-06 >6 September 2020</time>
                 </span>
                 分类为
                 <i class="iconfont icon-folder"></i>
                 <span class="post-category">
-                        <a href="/categories/%E5%B9%B6%E5%8F%91/"> 并发 </a>
+                        <a href="www.beanlam.me/categories/%E5%B9%B6%E5%8F%91/"> 并发 </a>
                         
                 </span>
                 <i class="iconfont icon-timer"></i>
@@ -304,7 +304,7 @@ Linux 4.15.0 <span style="color:#f92672">(</span>ubuntu<span style="color:#f9267
           
 
           
-        <a href="//service.weibo.com/share/share.php?url=%2f2020%2fconcurrency-context-switch%2f&amp;appkey=&amp;title=%e5%a4%9a%e7%ba%bf%e7%a8%8b%e4%b8%8e%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2" target="_blank" title="Share on Douban ">
+        <a href="//service.weibo.com/share/share.php?url=www.beanlam.me%2f2020%2fconcurrency-context-switch%2f&amp;appkey=&amp;title=%e5%a4%9a%e7%ba%bf%e7%a8%8b%e4%b8%8e%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2" target="_blank" title="Share on Douban ">
             <i class="iconfont icon-weibo"></i>
           </a>
           
@@ -324,7 +324,7 @@ Linux 4.15.0 <span style="color:#f92672">(</span>ubuntu<span style="color:#f9267
         
         <section>
                 <a href="javascript:window.history.back();">返回</a></span> · 
-                <span><a href="">主页</a></span>
+                <span><a href="www.beanlam.me">主页</a></span>
         </section>
     </div>
 
@@ -367,7 +367,7 @@ Linux 4.15.0 <span style="color:#f92672">(</span>ubuntu<span style="color:#f9267
         <span itemprop="copyrightYear">2015 - 2020</span>
         
          
-            <span class="author" itemprop="copyrightHolder"><a href="">beanlam</a> | </span>
+            <span class="author" itemprop="copyrightHolder"><a href="www.beanlam.me">beanlam</a> | </span>
          
 
 	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
@@ -388,7 +388,7 @@ Linux 4.15.0 <span style="color:#f92672">(</span>ubuntu<span style="color:#f9267
     
     <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
       
-     <script src="/js/vendor_gallery.min.js" async="" ></script>
+     <script src="/www.beanlam.me/js/vendor_gallery.min.js" async="" ></script>
     
   
 
