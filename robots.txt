@@ -63,4 +63,4 @@ Disallow: /
 User-agent: ZoominfoBot
 Disallow: /
 
-Sitemap: https://www.beanlam.me/sitemap.xml
+Sitemap: http://www.beanlam.me/sitemap.xml
