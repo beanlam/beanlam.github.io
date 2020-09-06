@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>并发 on beanlam</title>
-    <link>http://localhost:1313/categories/%E5%B9%B6%E5%8F%91/</link>
+    <link>https://www.beanlam.me/categories/%E5%B9%B6%E5%8F%91/</link>
     <description>Recent content in 并发 on beanlam</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
     <lastBuildDate>Sun, 06 Sep 2020 13:27:05 +0800</lastBuildDate>
     
-	<atom:link href="http://localhost:1313/categories/%E5%B9%B6%E5%8F%91/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.beanlam.me/categories/%E5%B9%B6%E5%8F%91/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>多线程与上下文切换</title>
-      <link>http://localhost:1313/2020/concurrency-context-switch/</link>
+      <link>https://www.beanlam.me/2020/concurrency-context-switch/</link>
       <pubDate>Sun, 06 Sep 2020 13:27:05 +0800</pubDate>
       
-      <guid>http://localhost:1313/2020/concurrency-context-switch/</guid>
+      <guid>https://www.beanlam.me/2020/concurrency-context-switch/</guid>
       <description>CPU 上下文切换 一个支持多任务的操作系统，比如 Linux，它支持远大于 CPU 数量的任务同时运行。但是这些任务实际上并不是真的在同时运行，因为系统在很短的时间内，将 CPU 轮流分配给它们，所以给人一种多个任务同时在运行的感觉。
 CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行，从哪里加载数据，因此需要操作系统提前帮这个任务设置好 程序计数器 和 CPU 寄存器。
  CPU 寄存器，是 CPU 内置的容量小、但速度极快的内存； 程序计数器，则是用来存储 CPU 正在执行的指令位置、或者即将执行的下一条指令位置。  CPU 强烈依赖这两个要素，来运行任务，这两个要素称之为 CPU 上下文。
