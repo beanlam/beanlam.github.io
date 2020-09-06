@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on beanlam</title>
+    <link>http://localhost:1313/posts/</link>
+    <description>Recent content in Posts on beanlam</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>cn</language>
+    <lastBuildDate>Sun, 06 Sep 2020 13:27:05 +0800</lastBuildDate>
+    
+	<atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>多线程与上下文切换</title>
+      <link>http://localhost:1313/2020/concurrency-context-switch/</link>
+      <pubDate>Sun, 06 Sep 2020 13:27:05 +0800</pubDate>
+      
+      <guid>http://localhost:1313/2020/concurrency-context-switch/</guid>
+      <description>CPU 上下文切换 一个支持多任务的操作系统，比如 Linux，它支持远大于 CPU 数量的任务同时运行。但是这些任务实际上并不是真的在同时运行，因为系统在很短的时间内，将 CPU 轮流分配给它们，所以给人一种多个任务同时在运行的感觉。
+CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行，从哪里加载数据，因此需要操作系统提前帮这个任务设置好 程序计数器 和 CPU 寄存器。
+ CPU 寄存器，是 CPU 内置的容量小、但速度极快的内存； 程序计数器，则是用来存储 CPU 正在执行的指令位置、或者即将执行的下一条指令位置。  CPU 强烈依赖这两个要素，来运行任务，这两个要素称之为 CPU 上下文。
+一次 system call 会导致两次 cpu context switch，Linux 按照特权等级，把进程的运行空间分为内核空间和用户空间，分别对应着下图中， CPU 特权等级的 Ring 0 和 Ring 3。
+ 内核空间（Ring 0）具有最高权限，可以直接访问所有资源； 用户空间（Ring 3）只能访问受限资源，不能直接访问内存等硬件设备，必须通过系统调用陷入到内核中，才能访问这些特权资源。  假设一个 process 需要做文件读取操作，那么它需要进行 system call 从 user space 切换到 kernel space，这里会发生两次 cpu context switch
+ 从用户态进入内核态 CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。 从内核态退回用户态 系统调用结束后，CPU寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。  进程上下文切换 由于进程的是由内核来管理和调度的，所以进程的切换只会发生在内核态，一个进程的状态分散在两个用户态和内核态。用户态主要保存了进程的虚拟内存、栈以及全局变量，内核态主要保存了进程的 CPU 上下文。</description>
+    </item>
+    
+  </channel>
+</rss>

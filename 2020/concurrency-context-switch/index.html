@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  
+  
+  <link rel="canonical" href="http://localhost:1313/2020/concurrency-context-switch/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           多线程与上下文切换 | beanlam
+       
+  </title>
+  <meta name="title" content="多线程与上下文切换 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="多线程与上下文切换"/>
+<meta name="twitter:description" content="CPU 上下文切换 一个支持多任务的操作系统，比如 Linux，它支持远大于 CPU 数量的任务同时运行。但是这些任务实际上并不是真的在同时运行，因为系统在很短的时间内，将 CPU 轮流分配给它们，所以给人一种多个任务同时在运行的感觉。
+CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行，从哪里加载数据，因此需要操作系统提前帮这个任务设置好 程序计数器 和 CPU 寄存器。
+ CPU 寄存器，是 CPU 内置的容量小、但速度极快的内存； 程序计数器，则是用来存储 CPU 正在执行的指令位置、或者即将执行的下一条指令位置。  CPU 强烈依赖这两个要素，来运行任务，这两个要素称之为 CPU 上下文。
+一次 system call 会导致两次 cpu context switch，Linux 按照特权等级，把进程的运行空间分为内核空间和用户空间，分别对应着下图中， CPU 特权等级的 Ring 0 和 Ring 3。
+ 内核空间（Ring 0）具有最高权限，可以直接访问所有资源； 用户空间（Ring 3）只能访问受限资源，不能直接访问内存等硬件设备，必须通过系统调用陷入到内核中，才能访问这些特权资源。  假设一个 process 需要做文件读取操作，那么它需要进行 system call 从 user space 切换到 kernel space，这里会发生两次 cpu context switch
+ 从用户态进入内核态 CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。 从内核态退回用户态 系统调用结束后，CPU寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。  进程上下文切换 由于进程的是由内核来管理和调度的，所以进程的切换只会发生在内核态，一个进程的状态分散在两个用户态和内核态。用户态主要保存了进程的虚拟内存、栈以及全局变量，内核态主要保存了进程的 CPU 上下文。"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "多线程与上下文切换",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http:\/\/localhost:1313\/2020\/concurrency-context-switch\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "http:\/\/localhost:1313\/images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  252 ,
+  "url": "http:\/\/localhost:1313\/2020\/concurrency-context-switch\/",
+  "datePublished": "2020-09-06T13:27:05\u002b08:00",
+  "dateModified": "2020-09-06T13:27:05\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http:\/\/localhost:1313\/images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="http://localhost:1313">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="http://localhost:1313">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">多线程与上下文切换</h1>
+        <div class="post-meta">
+            本文 由 <a href="http://localhost:1313" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2020-09-06 >6 September 2020</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="http://localhost:1313/categories/%E5%B9%B6%E5%8F%91/"> 并发 </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                2 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="cpu-上下文切换">CPU 上下文切换</h1>
+<p>一个支持多任务的操作系统，比如 Linux，它支持远大于 CPU 数量的任务同时运行。但是这些任务实际上并不是真的在同时运行，因为系统在很短的时间内，将 CPU 轮流分配给它们，所以给人一种多个任务同时在运行的感觉。</p>
+<p>CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行，从哪里加载数据，因此需要操作系统提前帮这个任务设置好 <strong>程序计数器</strong> 和 <strong>CPU 寄存器</strong>。</p>
+<ul>
+<li>CPU 寄存器，是 CPU 内置的容量小、但速度极快的内存；</li>
+<li>程序计数器，则是用来存储 CPU 正在执行的指令位置、或者即将执行的下一条指令位置。</li>
+</ul>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/concurrency-context-switch/image-20200620180422912.png" alt="程序计数器与寄存器" class="lazyload"><figcaption class="image-caption">程序计数器与寄存器</figcaption></figure></p>
+<p>CPU 强烈依赖这两个要素，来运行任务，这两个要素称之为 <strong>CPU 上下文</strong>。</p>
+<p>一次 system call 会导致两次 cpu context switch，Linux 按照特权等级，把进程的运行空间分为内核空间和用户空间，分别对应着下图中， CPU 特权等级的 Ring 0 和 Ring 3。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/concurrency-context-switch/image-20200620180500840.png" alt="用户态与内核态" class="lazyload"><figcaption class="image-caption">用户态与内核态</figcaption></figure></p>
+<ul>
+<li>内核空间（Ring 0）具有最高权限，可以直接访问所有资源；</li>
+<li>用户空间（Ring 3）只能访问受限资源，不能直接访问内存等硬件设备，必须通过系统调用陷入到内核中，才能访问这些特权资源。</li>
+</ul>
+<p>假设一个 process 需要做文件读取操作，那么它需要进行 system call 从 user space 切换到 kernel space，这里会发生<strong>两次</strong> cpu context switch</p>
+<ol>
+<li>从用户态进入内核态
+CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。</li>
+<li>从内核态退回用户态
+系统调用结束后，CPU寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。</li>
+</ol>
+<h1 id="进程上下文切换">进程上下文切换</h1>
+<p>由于进程的是由内核来管理和调度的，所以进程的切换只会发生在内核态，一个进程的状态分散在两个用户态和内核态。用户态主要保存了进程的虚拟内存、栈以及全局变量，内核态主要保存了进程的 CPU 上下文。</p>
+<p>因此进程发生切换时，需要同时保存用户态和内核态的状态。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/concurrency-context-switch/image-20200620180519778.png" alt="上下文切换" class="lazyload"><figcaption class="image-caption">上下文切换</figcaption></figure></p>
+<p>当发生以下情况时，会发生进程上下文切换：</p>
+<ol>
+<li>为了保证所有进程可以得到公平调度，CPU时间被划分为一段段的时间片，这些时间片再被轮流分配给各个进程。这样，当某个进程的时间片耗尽了，就会被系统挂起，切换到其它正在等待 CPU 的进程运行。</li>
+<li>进程在系统资源不足（比如内存不足）时，要等到资源满足后才可以运行，这个时候进程也会被挂起，并由系统调度其他进程运行。</li>
+<li>当进程通过睡眠函数 sleep 这样的方法将自己主动挂起时，自然也会重新调度。</li>
+<li>当有优先级更高的进程运行时，为了保证高优先级进程的运行，当前进程会被挂起，由高优先级进程来运行。</li>
+<li>发生硬件中断时，CPU上的进程会被中断挂起，转而执行内核中的中断服务程序。</li>
+</ol>
+<h1 id="线程上下文切换">线程上下文切换</h1>
+<p>线程与进程最大的区别在于，线程是调度的基本单位，而进程则是资源拥有的基本单位。</p>
+<ul>
+<li>当进程只有一个线程时，可以认为进程就等于线程。</li>
+<li>当进程拥有多个线程时，这些线程会共享相同的虚拟内存和全局变量等资源。这些资源在上下文切换时是不需要修改的。</li>
+<li>线程也有自己的私有数据，比如栈和寄存器等，这些在上下文切换时也是需要保存的。</li>
+</ul>
+<p>根据以上内容，可以知道线程上下文切换分为两种情况：</p>
+<ul>
+<li>前后两个线程属于不同进程
+此时，因为资源不共享，所以线程上下文切换过程就跟进程上下文切换是一样。</li>
+<li>前后两个线程属于同一个进程
+此时，因为虚拟内存是共享的，所以在切换时，虚拟内存这些资源就保持不动，只需要切换线程的私有数据、寄存器等不共享的数据。</li>
+</ul>
+<p>同进程内的线程切换，要比多进程间的切换消耗更少的资源，而这，也正是多线程代替多进程的一个优势。</p>
+<h1 id="中断上下文切换">中断上下文切换</h1>
+<p>为了快速响应硬件的事件，中断处理会打断进程的正常调度和执行，转而调用中断处理程序，响应设备事件。而在打断其他进程时，就需要将进程当前的状态保存下来，这样在中断结束后，进程仍然可以从原来的状态恢复运行。</p>
+<p>跟进程上下文不同，中断上下文切换并不涉及到进程的用户态。所以，即便中断过程打断了一个正处在用户态的进程，也不需要保存和恢复这个进程的虚拟内存、全局变量等用户态资源。中断上下文，其实只包括内核态中断服务程序执行所必需的状态，包括CPU 寄存器、内核堆栈、硬件中断参数等。</p>
+<p>对同一个 CPU 来说，中断处理比进程拥有更高的优先级，所以中断上下文切换并不会与进程上下文切换同时发生。同样道理，由于中断会打断正常进程的调度和执行，所以大部分中断处理程序都短小精悍，以便尽可能快的执行结束。</p>
+<p>另外，跟进程上下文切换一样，中断上下文切换也需要消耗CPU，切换次数过多也会耗费大量的 CPU，甚至严重降低系统的整体性能。</p>
+<h1 id="上下文切换性能分析">上下文切换性能分析</h1>
+<p>vmstat 是一个常用的系统性能分析工具，可以用来分析 CPU 上下文切换和中断次数</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ vmstat <span style="color:#ae81ff">5</span>
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r b swpd free buff cache si so bi bo in cs us sy id wa st
+ <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">7005360</span> <span style="color:#ae81ff">91564</span> <span style="color:#ae81ff">818900</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">25</span> <span style="color:#ae81ff">33</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">100</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span>
+</code></pre></div><p>需要重点关注四个数据：</p>
+<ol>
+<li>cs（context switch）是每秒 CPU 上下文切换的次数</li>
+<li>in（interrupt）则是每秒中断的次数</li>
+<li>r（Running or Runnable）是就绪队列的长度，也就是正在运行和等待CPU的进程数</li>
+<li>b（Blocked）则是处于不可中断睡眠状态的进程数</li>
+</ol>
+<p>vmstat 只给出了系统总体的上下文切换情况，要想查看每个进程的详细情况，需要使用 pidstat 工具，加上 -w 选项，就可以查看每个进程上下文切换的情况：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 每隔5秒输出1组数据</span>
+$ pidstat -w <span style="color:#ae81ff">5</span>
+Linux 4.15.0 <span style="color:#f92672">(</span>ubuntu<span style="color:#f92672">)</span> 09/23/18 _x86_64_ <span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> CPU<span style="color:#f92672">)</span>
+
+08:18:26 UID PID cswch/s nvcswch/s Command
+08:18:31 <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> 0.20 0.00 systemd
+08:18:31 <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">8</span> 5.40 0.00 rcu_sched
+...
+</code></pre></div><p>有两列内容是我们的重点关注对象。一个是 cswch ，表示每秒<strong>自愿上下文切换</strong>（voluntary context switches）的次数，另一个则是 nvcswch ，表示每秒<strong>非自愿上下文切换</strong>（non voluntary context switches）的次数。</p>
+<ul>
+<li>自愿上下文切换，是指进程无法获取所需资源，导致的上下文切换。
+比如说， I/O、内存等系统资源不足时，就会发生自愿上下文切换</li>
+<li>非自愿上下文切换，则是指进程由于时间片已到等原因，被系统强制调度，进而发生的上下文切换。
+比如说，大量进程都在争抢 CPU 时，就容易发生非自愿上下文切换。</li>
+</ul>
+<p>分析思路：</p>
+<ol>
+<li>就绪队列的长度与 CPU 个数的对比，如果 r 大于 cpu 个数，说明有 cpu 竞争。</li>
+<li>关注 用户态 和 内核态 的 cpu 使用率，明确 cpu 的时间主要花在哪</li>
+<li>关注中断次数</li>
+<li>pidstat 加上 -u 输出 cpu 使用率，加上 -t 输出该进程中的线程的指标，这个在线程上下文切换比较多的时候，比较重要且容易被忽略。</li>
+<li>自愿上下文切换变多了，说明进程都在等待资源，有可能发生了 I/O 等其他问题；</li>
+<li>非自愿上下文切换变多了，说明进程都在被强制调度，也就是都在争抢 CPU，说明 CPU 的确成了瓶颈；</li>
+<li>中断次数变多了，说明 CPU 被中断处理程序占用，还需要通过查看 /proc/interrupts 文件来分析具体的中断类型。</li>
+</ol>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>252</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=http%3a%2f%2flocalhost%3a1313%2f2020%2fconcurrency-context-switch%2f&amp;appkey=&amp;title=%e5%a4%9a%e7%ba%bf%e7%a8%8b%e4%b8%8e%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="http://localhost:1313">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+         
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2020-09-06 13:27:05 \u002b0800 CST',
+              title: '多线程与上下文切换',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="http://localhost:1313">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
