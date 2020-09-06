@@ -1,28 +1,28 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>beanlam on beanlam</title>
-    <link>https://www.beanlam.me/</link>
+    <link>http://beanlam.me/</link>
     <description>Recent content in beanlam on beanlam</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
     <lastBuildDate>Sun, 06 Sep 2020 13:27:05 +0800</lastBuildDate>
-    <atom:link href="https://www.beanlam.me/" rel="self" type="application/rss+xml" />
+    <atom:link href="http://beanlam.me/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Posts</title>
-      <link>https://www.beanlam.me/posts/</link>
+      <link>http://beanlam.me/posts/</link>
       <pubDate>Sun, 06 Sep 2020 13:27:05 +0800</pubDate>
       
-      <guid>https://www.beanlam.me/posts/</guid>
+      <guid>http://beanlam.me/posts/</guid>
       <description></description>
     </item>
     
     <item>
       <title>关于我</title>
-      <link>https://www.beanlam.me/about/</link>
+      <link>http://beanlam.me/about/</link>
       <pubDate>Wed, 09 Apr 2014 00:00:00 +0000</pubDate>
       
-      <guid>https://www.beanlam.me/about/</guid>
+      <guid>http://beanlam.me/about/</guid>
       <description>&lt;p&gt;金融中间件产品研发经验6年，主力编程语言 Java&lt;/p&gt;
 &lt;p&gt;先后做过金融业务引擎，分布式分库分表中间件，分布式事务中间件&lt;/p&gt;
 </description>
