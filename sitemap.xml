@@ -2,7 +2,7 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
     <url>
-      <loc>https://beanlam.me/</loc>
+      <loc>https://www.beanlam.me/</loc>
       
       <lastmod>2020-09-06T13:27:05+08:00</lastmod>
       
@@ -16,7 +16,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/categories/</loc>
+      <loc>https://www.beanlam.me/categories/</loc>
       
       <lastmod>2020-09-06T13:27:05+08:00</lastmod>
       
@@ -30,7 +30,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/posts/</loc>
+      <loc>https://www.beanlam.me/posts/</loc>
       
       <lastmod>2020-09-06T13:27:05+08:00</lastmod>
       
@@ -44,7 +44,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/2020/concurrency-context-switch/</loc>
+      <loc>https://www.beanlam.me/2020/concurrency-context-switch/</loc>
       
       <lastmod>2020-09-06T13:27:05+08:00</lastmod>
       
@@ -58,7 +58,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/categories/%E5%B9%B6%E5%8F%91/</loc>
+      <loc>https://www.beanlam.me/categories/%E5%B9%B6%E5%8F%91/</loc>
       
       <lastmod>2020-09-06T13:27:05+08:00</lastmod>
       
@@ -72,7 +72,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/about/</loc>
+      <loc>https://www.beanlam.me/about/</loc>
       
       <lastmod>2014-04-09T00:00:00+00:00</lastmod>
       
@@ -86,7 +86,7 @@
     </url>
   
     <url>
-      <loc>https://beanlam.me/tags/</loc>
+      <loc>https://www.beanlam.me/tags/</loc>
       
       
       <changefreq>monthly</changefreq>
