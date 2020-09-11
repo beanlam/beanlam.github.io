@@ -72,6 +72,34 @@
     </url>
   
     <url>
+      <loc>/2019/about-time/</loc>
+      
+      <lastmod>2019-03-07T11:49:40+08:00</lastmod>
+      
+      
+      <changefreq>monthly</changefreq>
+      
+      
+      <priority>0.5</priority>
+      
+      
+    </url>
+  
+    <url>
+      <loc>/categories/%E9%9A%8F%E6%83%B3/</loc>
+      
+      <lastmod>2019-03-07T11:49:40+08:00</lastmod>
+      
+      
+      <changefreq>monthly</changefreq>
+      
+      
+      <priority>0.5</priority>
+      
+      
+    </url>
+  
+    <url>
       <loc>/about/</loc>
       
       <lastmod>2014-04-09T00:00:00+00:00</lastmod>
