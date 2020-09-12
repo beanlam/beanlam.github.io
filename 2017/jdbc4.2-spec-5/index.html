@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/jdbc4.2-spec-4/" />
+  <link rel="next" href="/2017/jdbc4.2-spec-6/" />
+  <link rel="canonical" href="/2017/jdbc4.2-spec-5/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           JDBC4.2规范-第五章 类与接口 | beanlam
+       
+  </title>
+  <meta name="title" content="JDBC4.2规范-第五章 类与接口 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JDBC4.2规范-第五章 类与接口"/>
+<meta name="twitter:description" content="以下的类和接口，组成了 JDBC API
+5.1 java.sql包 JDBC API 的核心部分都藏在了 java.sql 这个包里，所有的枚举类，普通类以及接口，都在下方列了出来，其中，枚举和普通类是粗体，接口是正常字体。
+java.sql.Array
+java.sql.BatchUpdateException
+java.sql.Blob
+java.sql.CallableStatement
+java.sql.Clob
+java.sql.ClientinfoStatus
+java.sql.Connection
+java.sql.DataTruncation
+java.sql.DatabaseMetaData
+java.sql.Date
+java.sql.Driver
+java.sql.DriverAction
+java.sql.DriverManager
+java.sql.DriverPropertyInfo
+java.sql.JDBCType
+java.sql.NClob
+java.sql.ParameterMetaData
+java.sql.PreparedStatement
+java.sql.PseudoColumnUsage
+java.sql.Ref
+java.sql.ResultSet
+java.sql.ResultSetMetaData
+java.sql.RowId
+java.sql.RowIdLifeTime
+java.sql.Savepoint
+java.sql.SQLClientInfoException
+java.sql.SQLData
+java.sql.SQLDataException
+java.sql.SQLException
+java.sql.SQLFeatureNotSupportedException
+java.sql.SQLInput
+java.sql.SQLIntegrityConstraintViolationException
+java.sql.SQLInvalidAuthorizationSpecException
+java.sql.SQLNonTransientConnectionException
+java.sql.SQLNonTransientException
+java.sql.SQLOutput
+java.sql.SQLPermission
+java.sql.SQLSyntaxErrorException
+java.sql.SQLTimeoutException
+java.sql.SQLTransactionRollbackException
+java.sql.SQLTransientConnectionException
+java.sql.SQLTransientException
+java.sql.SQLType
+java.sql.SQLXML
+java.sql.SQLWarning
+java.sql.Statement
+java.sql.Struct
+java.sql.Time
+java.sql.Timestamp
+java.sql.Types
+java.sql.Wrapper
+下面这些类和接口是在 JDBC 4.2 API 中新增加或有过改动的，其中新增加的类和接口以粗体的形式表示
+java.sql.BatchUpdateException
+java.sql.CallableStatement
+java.sql.Connection
+java.sql.DatabaseMetaData"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JDBC4.2规范-第五章 类与接口",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/jdbc4.2-spec-5\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  144 ,
+  "url": "\/2017\/jdbc4.2-spec-5\/",
+  "datePublished": "2017-01-02T13:55:10\u002b08:00",
+  "dateModified": "2017-01-02T13:55:10\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">JDBC4.2规范-第五章 类与接口</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-01-02 >2 January 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/jdbc/"> jdbc </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                1 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <p>以下的类和接口，组成了 JDBC API</p>
+<h1 id="51-javasql包">5.1 <code>java.sql</code>包</h1>
+<p>JDBC API 的核心部分都藏在了 <code>java.sql</code> 这个包里，所有的枚举类，普通类以及接口，都在下方列了出来，其中，枚举和普通类是粗体，接口是正常字体。</p>
+<p>java.sql.Array</p>
+<p><strong>java.sql.BatchUpdateException</strong></p>
+<p>java.sql.Blob</p>
+<p>java.sql.CallableStatement</p>
+<p>java.sql.Clob</p>
+<p>java.sql.ClientinfoStatus</p>
+<p>java.sql.Connection</p>
+<p><strong>java.sql.DataTruncation</strong></p>
+<p>java.sql.DatabaseMetaData</p>
+<p><strong>java.sql.Date</strong></p>
+<p>java.sql.Driver</p>
+<p>java.sql.DriverAction</p>
+<p><strong>java.sql.DriverManager</strong></p>
+<p><strong>java.sql.DriverPropertyInfo</strong></p>
+<p><strong>java.sql.JDBCType</strong></p>
+<p>java.sql.NClob</p>
+<p>java.sql.ParameterMetaData</p>
+<p>java.sql.PreparedStatement</p>
+<p><strong>java.sql.PseudoColumnUsage</strong></p>
+<p>java.sql.Ref</p>
+<p>java.sql.ResultSet</p>
+<p>java.sql.ResultSetMetaData</p>
+<p>java.sql.RowId</p>
+<p><strong>java.sql.RowIdLifeTime</strong></p>
+<p>java.sql.Savepoint</p>
+<p><strong>java.sql.SQLClientInfoException</strong></p>
+<p>java.sql.SQLData</p>
+<p><strong>java.sql.SQLDataException</strong></p>
+<p><strong>java.sql.SQLException</strong></p>
+<p><strong>java.sql.SQLFeatureNotSupportedException</strong></p>
+<p>java.sql.SQLInput</p>
+<p><strong>java.sql.SQLIntegrityConstraintViolationException</strong></p>
+<p><strong>java.sql.SQLInvalidAuthorizationSpecException</strong></p>
+<p><strong>java.sql.SQLNonTransientConnectionException</strong></p>
+<p><strong>java.sql.SQLNonTransientException</strong></p>
+<p>java.sql.SQLOutput</p>
+<p>java.sql.SQLPermission</p>
+<p>java.sql.SQLSyntaxErrorException</p>
+<p>java.sql.SQLTimeoutException</p>
+<p>java.sql.SQLTransactionRollbackException</p>
+<p>java.sql.SQLTransientConnectionException</p>
+<p>java.sql.SQLTransientException</p>
+<p>java.sql.SQLType</p>
+<p>java.sql.SQLXML</p>
+<p><strong>java.sql.SQLWarning</strong></p>
+<p>java.sql.Statement</p>
+<p>java.sql.Struct</p>
+<p><strong>java.sql.Time</strong></p>
+<p><strong>java.sql.Timestamp</strong></p>
+<p><strong>java.sql.Types</strong></p>
+<p>java.sql.Wrapper</p>
+<p>下面这些类和接口是在 JDBC 4.2 API 中新增加或有过改动的，其中新增加的类和接口以粗体的形式表示</p>
+<p>java.sql.BatchUpdateException</p>
+<p>java.sql.CallableStatement</p>
+<p>java.sql.Connection</p>
+<p>java.sql.DatabaseMetaData</p>
+<p>java.sql.Date</p>
+<p>java.sql.Driver</p>
+<p><strong>java.sql.DriverAction</strong></p>
+<p>java.sql.DriverManager</p>
+<p><strong>java.sql.JDBCType</strong></p>
+<p>java.sql.Permission</p>
+<p>java.sql.PreparedStatement</p>
+<p>java.sql.ResultSet</p>
+<p>java.sql.SQLInput</p>
+<p>java.sql.SQLOutput</p>
+<p><strong>java.sql.SQLType</strong></p>
+<p>java.sql.SQLXML</p>
+<p>java.sql.Statement</p>
+<p>java.sql.Types</p>
+<p>java.sql.Timestamp</p>
+<p>javax.sql.XADataSource</p>
+<p>下面这个图展示了 <code>java.sql</code> 包里关键的类和接口之间关系</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/classes-interfaces.jpg" alt="" class="lazyload"><figcaption class="image-caption"></figcaption></figure></p>
+<h1 id="52-javaxsql-包">5.2 <code>javax.sql</code> 包</h1>
+<p>下面列出来的是 <code>javax.sql</code> 这个包中的类和接口，类用粗体表示，接口是普通字体</p>
+<p>javax.sql.CommonDataSource</p>
+<p><strong>javax.sql.ConnectionEvent</strong></p>
+<p>javax.sql.ConnectionEventListener</p>
+<p>javax.sql.ConnectionPoolDataSource</p>
+<p>javax.sql.DataSource</p>
+<p>javax.sql.PooledConnection</p>
+<p>javax.sql.RowSet</p>
+<p><strong>javax.sql.RowSetEvent</strong></p>
+<p>javax.sql.RowSetInternal</p>
+<p>javax.sql.RowSetListener</p>
+<p>javax.sql.RowSetMetaData</p>
+<p>javax.sql.RowSetReader</p>
+<p>javax.sql.RowSetWriter</p>
+<p><strong>javax.sql.StatementEvent</strong></p>
+<p>javax.sql.StatementEventListener</p>
+<p>javax.sql.XAConnection</p>
+<p>javax.sql.XADataSource</p>
+<blockquote>
+<p>注意 — <code>javax.sql</code> 这个包中的类和接口在 JDBC 2.0 API 中初次使用，在 J2SE 1.2 中，并没有包含这个包，这个包是作为 J2SE 1.2 平台的一个可选包。但在 J2SE 1.4 后，<code>javax.sql</code> 和 <code>java.sql</code> 一样，也成为了 Java 平台的一部分。</p>
+</blockquote>
+<p>以下的图展示了 <code>javax.sql.DataSource</code> 与 <code>java.sql.Connection</code> 的关系</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-5/ds_conn.jpg" alt="DataSource与Connection" class="lazyload"><figcaption class="image-caption">DataSource与Connection</figcaption></figure></p>
+<p>下图展示了与连接池有关的组成部分</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-5/pool.jpg" alt="连接池" class="lazyload"><figcaption class="image-caption">连接池</figcaption></figure></p>
+<p>下图展示了分布式事务有关的组成部分</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-5/dt.jpg" alt="分布式事务" class="lazyload"><figcaption class="image-caption">分布式事务</figcaption></figure></p>
+<p>下图展示与 RowSet 有关的组成部分</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-5/rowset.jpg" alt="rowset" class="lazyload"><figcaption class="image-caption">rowset</figcaption></figure></p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>144</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fjdbc4.2-spec-5%2f&amp;appkey=&amp;title=JDBC4.2%e8%a7%84%e8%8c%83-%e7%ac%ac%e4%ba%94%e7%ab%a0%20%e7%b1%bb%e4%b8%8e%e6%8e%a5%e5%8f%a3" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/jdbc4.2-spec-4/" class="prev" rel="prev" title="JDBC4.2规范-第四章 JDBC API 概览"><i class="iconfont icon-dajiantou"></i>&nbsp;JDBC4.2规范-第四章 JDBC API 概览</a>
+         
+        
+        <a href="/2017/jdbc4.2-spec-6/" class="next" rel="next" title="JDBC4.2规范-第六章 遵守规范">JDBC4.2规范-第六章 遵守规范&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-01-02 13:55:10 \u002b0800 CST',
+              title: 'JDBC4.2规范-第五章 类与接口',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

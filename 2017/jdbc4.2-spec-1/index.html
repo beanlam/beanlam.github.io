@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  
+  <link rel="next" href="/2017/jdbc4.2-spec-2/" />
+  <link rel="canonical" href="/2017/jdbc4.2-spec-1/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           JDBC4.2规范-第一章 简介 | beanlam
+       
+  </title>
+  <meta name="title" content="JDBC4.2规范-第一章 简介 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JDBC4.2规范-第一章 简介"/>
+<meta name="twitter:description" content="1.1 JDBC API 简介 JDBC API 为 Java 语言提供了一种访问关系型数据库的方法。有了 JDBC API，应用程序便可以通过它来执行 SQL 语句、获取执行结果，以及对底层的数据库进行写入。JDBC API 也可以用来和多个数据源交互，这些数据源以分布式的形式部署。
+JDBC API 基于 X/Open SQL CLI 标准，ODBC 也以它为标准。对于 X/Open SQL CLI 标准所定义的一些抽象概念，JDBC API 提供了对应的概念的映射，并且非常易用以及容易理解。
+自从 1997 年 JDBC API 首次被提出以后， 它的被接受程度越来越大，并且也出现了大量的对于 JDBC API 规范的实现，这都归功于 JDBC API 本身的灵活性。
+1.2 平台 JDBC API 是 Java 语言的一部分，JDBC API 分为两个 package，分别是 java.sql 和 javax.sql。在 Java SE 平台和 Java EE 平台都存在这两个 package。
+1.3 目标读者  需要实现相应的驱动的数据库厂商 需要在 JDBC 驱动上建立多层服务的应用服务器厂商 需要基于 JDBC API 来开发应用的厂商  本文档也适用于任何在 JDBC API 上层开发应用的开发者"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JDBC4.2规范-第一章 简介",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/jdbc4.2-spec-1\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  79 ,
+  "url": "\/2017\/jdbc4.2-spec-1\/",
+  "datePublished": "2017-01-02T13:34:42\u002b08:00",
+  "dateModified": "2017-01-02T13:34:42\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">JDBC4.2规范-第一章 简介</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-01-02 >2 January 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/jdbc/"> jdbc </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                1 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="11-jdbc-api-简介">1.1 JDBC API 简介</h1>
+<p>JDBC API 为 Java 语言提供了一种访问关系型数据库的方法。有了 JDBC API，应用程序便可以通过它来执行 SQL 语句、获取执行结果，以及对底层的数据库进行写入。JDBC API 也可以用来和多个数据源交互，这些数据源以分布式的形式部署。</p>
+<p>JDBC API 基于 <strong>X/Open SQL CLI</strong> 标准，ODBC 也以它为标准。对于 <strong>X/Open SQL CLI</strong> 标准所定义的一些抽象概念，JDBC API 提供了对应的概念的映射，并且非常易用以及容易理解。</p>
+<p>自从 1997 年 JDBC API 首次被提出以后， 它的被接受程度越来越大，并且也出现了大量的对于 JDBC API 规范的实现，这都归功于 JDBC API 本身的灵活性。</p>
+<h1 id="12-平台">1.2 平台</h1>
+<p>JDBC API 是 Java 语言的一部分，JDBC API 分为两个 package，分别是 <code>java.sql</code> 和 <code>javax.sql</code>。在 Java SE 平台和 Java EE 平台都存在这两个 package。</p>
+<h1 id="13-目标读者">1.3 目标读者</h1>
+<ul>
+<li>需要实现相应的驱动的数据库厂商</li>
+<li>需要在 JDBC 驱动上建立多层服务的应用服务器厂商</li>
+<li>需要基于 JDBC API 来开发应用的厂商</li>
+</ul>
+<p>本文档也适用于任何在 JDBC API 上层开发应用的开发者</p>
+<h1 id="14-致谢">1.4 致谢</h1>
+<p>译者省略</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>79</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fjdbc4.2-spec-1%2f&amp;appkey=&amp;title=JDBC4.2%e8%a7%84%e8%8c%83-%e7%ac%ac%e4%b8%80%e7%ab%a0%20%e7%ae%80%e4%bb%8b" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+         
+        
+        <a href="/2017/jdbc4.2-spec-2/" class="next" rel="next" title="JDBC4.2规范-第二章 目标">JDBC4.2规范-第二章 目标&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-01-02 13:34:42 \u002b0800 CST',
+              title: 'JDBC4.2规范-第一章 简介',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

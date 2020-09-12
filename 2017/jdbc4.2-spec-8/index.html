@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/jdbc4.2-spec-7/" />
+  <link rel="next" href="/2017/jdbc4.2-spec-9/" />
+  <link rel="canonical" href="/2017/jdbc4.2-spec-8/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           JDBC4.2规范-第八章 异常 | beanlam
+       
+  </title>
+  <meta name="title" content="JDBC4.2规范-第八章 异常 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JDBC4.2规范-第八章 异常"/>
+<meta name="twitter:description" content="当访问一个数据源时发生错误或者警告，JDBC 用 SQLException 这个类及其子类来表示并提供相关的异常信息。
+8.1 SQLException SQLException 由一下几部分组成：
+ 描述错误的文本信息。可以通过 SQLException.getMessage() 来获取。 一个 SQLState 对象。可以通过 SQLException.getSQLStateType() 来获取。 错误码，是某种错误类型的一个编码，int 类型，可以通过 SQLException.getErrorCode() 来获取。 底层的异常，是一个 Throwable 对象，用来代表引起 SQLException 发生的真正原因，通过 SQLException.getCause() 来获取。 异常链的引用，如果有不止一个 SQLException 异常，可以通过递归式地调用 SQLException.getNextException 来获取整个异常链，直到这个方法返回 null，异常链结束。  8.1.1 对 Java SE 异常链的支持 SQLException 和它的子类都支持 Java SE 的异常链机制，为了实现这个功能，有以下几个地方特意做了处理：
+ 增加额外的四个构造函数 支持对异常链的 For-Each 语法 getCause 方法不一定会返回 SQLException 类型或者其子类型  可以参考 JDBC API Java DOC 获取更详细的信息
+8.1.2 遍历多个 SQLException 在一次 SQL 语句的执行中，很有可能会发生一个或者多个异常，多个异常之间有着相应的联系，这意味着，当捕获到一个 SQLException 时，它的背后可能还有多个 SQLException 链接在它身上，为了遍历这条异常链，通常可以通过循环调用 SQLException."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JDBC4.2规范-第八章 异常",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/jdbc4.2-spec-8\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  303 ,
+  "url": "\/2017\/jdbc4.2-spec-8\/",
+  "datePublished": "2017-01-02T21:49:40\u002b08:00",
+  "dateModified": "2017-01-02T21:49:40\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">JDBC4.2规范-第八章 异常</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-01-02 >2 January 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/jdbc/"> jdbc </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                2 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <p>当访问一个数据源时发生错误或者警告，JDBC 用 <code>SQLException</code> 这个类及其子类来表示并提供相关的异常信息。</p>
+<h1 id="81-sqlexception">8.1 SQLException</h1>
+<p>SQLException 由一下几部分组成：</p>
+<ul>
+<li>描述错误的文本信息。可以通过 <code>SQLException.getMessage()</code> 来获取。</li>
+<li>一个 SQLState 对象。可以通过 <code>SQLException.getSQLStateType()</code> 来获取。</li>
+<li>错误码，是某种错误类型的一个编码，int 类型，可以通过 <code>SQLException.getErrorCode()</code> 来获取。</li>
+<li>底层的异常，是一个 <code>Throwable</code> 对象，用来代表引起 <code>SQLException</code> 发生的真正原因，通过 <code>SQLException.getCause()</code> 来获取。</li>
+<li>异常链的引用，如果有不止一个 SQLException 异常，可以通过递归式地调用 <code>SQLException.getNextException</code> 来获取整个异常链，直到这个方法返回 null，异常链结束。</li>
+</ul>
+<h2 id="811-对-java-se-异常链的支持">8.1.1 对 Java SE 异常链的支持</h2>
+<p>SQLException 和它的子类都支持 Java SE 的异常链机制，为了实现这个功能，有以下几个地方特意做了处理：</p>
+<ul>
+<li>增加额外的四个构造函数</li>
+<li>支持对异常链的 For-Each 语法</li>
+<li>getCause 方法不一定会返回 SQLException 类型或者其子类型</li>
+</ul>
+<p>可以参考 JDBC API Java DOC 获取更详细的信息</p>
+<h2 id="812-遍历多个-sqlexception">8.1.2 遍历多个 SQLException</h2>
+<p>在一次 SQL 语句的执行中，很有可能会发生一个或者多个异常，多个异常之间有着相应的联系，这意味着，当捕获到一个 SQLException 时，它的背后可能还有多个 SQLException 链接在它身上，为了遍历这条异常链，通常可以通过循环调用 <code>SQLException.getNextException</code> 方法，直到该方法返回 Null。
+同时，也可以通过循环调用 <code>SQLException.getCause()</code> 来获得引起一个 SQLException 的真正原因，直到该方法返回 Null。
+以下代码示范了如何获取所有的 SQLException 以及其原因：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>SQLException ex<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">while</span><span style="color:#f92672">(</span>ex <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;SQLState:&#34;</span> <span style="color:#f92672">+</span> ex<span style="color:#f92672">.</span><span style="color:#a6e22e">getSQLState</span><span style="color:#f92672">());</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Error Code:&#34;</span> <span style="color:#f92672">+</span> ex<span style="color:#f92672">.</span><span style="color:#a6e22e">getErrorCode</span><span style="color:#f92672">());</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Message:&#34;</span> <span style="color:#f92672">+</span> ex<span style="color:#f92672">.</span><span style="color:#a6e22e">getMessage</span><span style="color:#f92672">());</span>
+    Throwable t <span style="color:#f92672">=</span> ex<span style="color:#f92672">.</span><span style="color:#a6e22e">getCause</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">while</span><span style="color:#f92672">(</span>t <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Cause:&#34;</span> <span style="color:#f92672">+</span> t<span style="color:#f92672">);</span>
+      t <span style="color:#f92672">=</span> t<span style="color:#f92672">.</span><span style="color:#a6e22e">getCause</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+    ex <span style="color:#f92672">=</span> ex<span style="color:#f92672">.</span><span style="color:#a6e22e">getNextException</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="8121-使用-for-each-循环遍历-sqlexception">8.1.2.1 使用 For-Each 循环遍历 SQLException</h3>
+<p>以下代码示范了如何使用：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>SQLException ex<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">for</span><span style="color:#f92672">(</span>Throwable e <span style="color:#f92672">:</span> ex <span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Error encountered: &#34;</span> <span style="color:#f92672">+</span> e<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h1 id="82-sqlwarning">8.2 SQLWarning</h1>
+<p><code>SQLWarning</code> 是 <code>SQLException</code> 的子类，  下面这些接口的方法都有可能在对数据库进行操作的时候产生 SQLWarning</p>
+<ul>
+<li>Connection</li>
+<li>DataSet</li>
+<li>Statement</li>
+<li>ResultSet
+当使用者调用其中一个方法后，如果产生了 SQLWarning，使用者并不会马上就被通知到，而必须使用者主动地去调用 <code>getWarnings</code> 方法才能获得。SQLWarning 也可以支持链式的机制，通过<code>SQLWarning.getNextWarning</code> 方法可以获取整个链条。</li>
+</ul>
+<h1 id="83-datatruncation">8.3 DataTruncation</h1>
+<p><code>DataTruncation</code> 类是 <code>SQLWarning</code> 的一个子类，用来表示当数据被裁截时的警告。如果向数据库写入数据时发生了数据裁截，<code>DataTruncation</code> 会像异常一样被抛出来通知调用者，如果是在读取数据库数据的时候发生裁截，那么只会产生一个警告。
+一个 <code>DataTruncation</code> 对象由以下部分组成：</p>
+<ul>
+<li>描述文本</li>
+<li>一个代码为 01004 的 SQLState（当读取数据时发生数据裁截）</li>
+<li>一个代码为 22001 的 SQLState（当写入数据的时候发生数据裁截）</li>
+<li>一个 Boolean 类型的标识，标识是字段值被裁剪还是参数被裁剪，DataTruncation.getParameter 方法如果返回 true 则是参数被裁截，否则是字段值被裁截</li>
+<li>一个 int 值代表被裁截的字段或者参数的下标值</li>
+<li>一个 Boolean 类型的标识，用来标识是读取还是写入的时候发生的数据裁截，通过 <code>DataTruncation.getRead </code> 来判断</li>
+<li><code>DataTruncation.getDataSize</code> 方法返回一个 int 值，用来代表被裁截前的数据大小，如果返回 -1 代表大小未知</li>
+<li><code>DataTruncation.getTransferSize</code> 方法返回一个 int 值，代表裁截后的实际数据大小</li>
+</ul>
+<h2 id="831-静默裁截">8.3.1 静默裁截</h2>
+<p><code>Statement.setMaxFieldSize</code> 方法允许设置一个最大的字段长度限制，这个限制只对这些数据类型有效：BINARY, VARBINARY, LONGVARBINARY, CHAR, VARCHAR, LONGVARCHAR, NCHAR, NVARCHAR 和 LONGNVARCHAR。如果设置了这个限制，并且从数据库读出超过这个限制的长度的字段值时，将不会抛出 DataTruncation</p>
+<h1 id="84-batchupdateexception">8.4 BatchUpdateException</h1>
+<p>当批量的 SQL 语句被执行时，有可能会抛出 <code>BatchUpdateException</code>，具体见第十四章。</p>
+<h1 id="85-可分类的-sqlexceptions">8.5 可分类的 SQLExceptions</h1>
+<p>SQLExceptions 可分为以下三种类型：</p>
+<ul>
+<li>SQLNonTransientException</li>
+<li>SQLTransientException</li>
+<li>SQLRecoverableException</li>
+</ul>
+<h2 id="851-nontransient-sqlexceptions">8.5.1 NonTransient SQLExceptions</h2>
+<p>一个 NonTransient SQLExceptions 必须继承自 SQLNonTransientException 类，如果一次数据库操作发生错误，在这个错误的原因未解决之前，继续调用相同的数据库操作，将会抛出一个 NonTransient SQLException，如果抛出的异常不是 SQLNonTransientConnectionException，那么还可以认为数据库连接依然是有效的，一下列表定义了具体的 SQLNonTransientSQLException 与 SQLState 的对应关系：</p>
+<table>
+<thead>
+<tr>
+<th>SQL State</th>
+<th>SQLNonTransientSQLException 子类</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0A</td>
+<td>SQLFeatureNotSupportedException</td>
+</tr>
+<tr>
+<td>08</td>
+<td>SQLNonTransientConnectionException</td>
+</tr>
+<tr>
+<td>22</td>
+<td>SQLDataException</td>
+</tr>
+<tr>
+<td>23</td>
+<td>SQLIntegrityConstraintViolationException</td>
+</tr>
+<tr>
+<td>28</td>
+<td>SQLInvalidAuthorizationExceptio</td>
+</tr>
+<tr>
+<td>42</td>
+<td>SQLSyntaxErrorException</td>
+</tr>
+</tbody>
+</table>
+<p>除了上述表格提到的，具体的数据库驱动实现也可以增加自己的 NonTransient Exception 类型</p>
+<h2 id="852-transient-exceptions">8.5.2 Transient Exceptions</h2>
+<p>Transient Exception 与 NonTransient Exception 的不同是，如果一次数据库操作发生了错误，那么在连接还有效的情况下，可以假设第二次相同的操作有可能成功。一个 Transient Exception 必须是 SQLTransientException 的子类。与 SQL State 的对应关系如下所示：</p>
+<table>
+<thead>
+<tr>
+<th>SQL State</th>
+<th>SQLTransientSQLException 子类</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>08</td>
+<td>SQLTransientConnectionException</td>
+</tr>
+<tr>
+<td>40</td>
+<td>SQLTransactionRollbackException</td>
+</tr>
+<tr>
+<td>N/A</td>
+<td>SQLTimeoutException</td>
+</tr>
+</tbody>
+</table>
+<p>除了上述表格提到的，具体的数据库驱动实现也可以增加自己的 Transient Exception 类型</p>
+<h2 id="853-sqlrecoverableexception">8.5.3 SQLRecoverableException</h2>
+<p>这个异常代表可恢复异常，所谓的可恢复是指，如果一次数据库操作失败了，那么应用层可以通过某些步骤来进行恢复设置，并且重新做同样的数据库操作后能成功。例如说，弃用旧连接，重新获取一条数据库连接。如果发生了 SQLRecoverableException，应用必须假设当前的连接已经是不可用的。</p>
+<h1 id="86-sqlclientinfoexception">8.6 SQLClientinfoException</h1>
+<p>当调用 <code>Connection.setClientInfo</code> 方法来设置客户端信息时，可能会抛出这个异常。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>303</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fjdbc4.2-spec-8%2f&amp;appkey=&amp;title=JDBC4.2%e8%a7%84%e8%8c%83-%e7%ac%ac%e5%85%ab%e7%ab%a0%20%e5%bc%82%e5%b8%b8" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/jdbc4.2-spec-7/" class="prev" rel="prev" title="JDBC4.2规范-第七章 数据库元数据"><i class="iconfont icon-dajiantou"></i>&nbsp;JDBC4.2规范-第七章 数据库元数据</a>
+         
+        
+        <a href="/2017/jdbc4.2-spec-9/" class="next" rel="next" title="JDBC4.2规范-第九章 连接">JDBC4.2规范-第九章 连接&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-01-02 21:49:40 \u002b0800 CST',
+              title: 'JDBC4.2规范-第八章 异常',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

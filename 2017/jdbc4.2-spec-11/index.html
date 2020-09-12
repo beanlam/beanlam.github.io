@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/jdbc4.2-spec-10/" />
+  <link rel="next" href="/2019/about-time/" />
+  <link rel="canonical" href="/2017/jdbc4.2-spec-11/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           JDBC4.2规范-第十一章 连接池 | beanlam
+       
+  </title>
+  <meta name="title" content="JDBC4.2规范-第十一章 连接池 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JDBC4.2规范-第十一章 连接池"/>
+<meta name="twitter:description" content="在基本的 DataSource 实现中，客户端的 Connection 对象与物理数据库连接有着1:1的关系。当 Connection 被关闭以后，物理连接也会被关闭。因此，连接的频繁打开、初始化以及关闭，会在一个客户端会话中上演多次，带来了过重的性能消耗。 而连接池就能解决这个问题，连接池维护了一系列物理数据库连接的缓存，可以被多个客户端会话重复使用。连接池能够极大地提高性能和可扩展性，特别是在一个三层架构的环境中，大量的客户端可以共享一个数量比较小的物理数据库连接池。在图11-1中，JDBC 驱动提供了一个 ConnectionPoolDataSource 的实现，应用服务器可以用它来创建和管理连接池。
+连接池的管理策略跟具体的实现有关，也跟具体的应用服务器有关。应用服务器对客户端提供了一个 DataSource 接口的具体实现，使得连接池化对于客户端来说是透明的。最终，客户端使用 DataSource API 就能和之前使用 JNDI 一样，获得了更好的性能和可扩展性。
+下文将会介绍 ConnectionPoolDataSource 接口、PooledConnection 接口以及 ConnectionEvent 类，这三个组成部分是一个相互合作的关系，下文将以一个经典线程池的实现的角度，逐步描述这几部分。这一章也会介绍基本的 DataSource 对象和池化的 DataSource 对象之间的区别，此外，还会讨论一个池化的连接如何能够维护一堆可重用的 PreparedStatement 对象。
+尽管本章中的所有讨论都是假设在三层架构环境下的，但连接的池化在两层架构的环境下也同样有用。 在两层架构的环境中，JDBC 驱动既实现了 DataSource 接口，也实现 ConnectionPoolDataSource 接口，这种实现方式允许客户端打开或者关闭多个连接。
+11.1 ConnectionPoolDataSource 和 PooledConnection 一般来说， 一个 JDBC 驱动会去实现 ConnectionPoolDataSource 接口，应用服务器可以使用这个接口来获得 PooledConnection 对象，以下代码展示了 getPooledConnection 方法的两种版本
+public interface ConnectionPoolDataSource { PooledConnection getPooledConnection() throws SQLException; PooledConnection getPooledConnection(String user, String password) throws SQLException; } 一个 PooledConnection 对象代表一条与数据源之间的物理连接。JDBC 驱动对于 PooledConnection 的实现，则会封装所有与维护这条连接相关的细节。 应用服务器则会在它的 DataSource 接口的实现中，缓存和重用这些 PooledConnection。当客户端调用 DataSource."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JDBC4.2规范-第十一章 连接池",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/jdbc4.2-spec-11\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  590 ,
+  "url": "\/2017\/jdbc4.2-spec-11\/",
+  "datePublished": "2017-01-02T21:58:47\u002b08:00",
+  "dateModified": "2017-01-02T21:58:47\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">JDBC4.2规范-第十一章 连接池</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-01-02 >2 January 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/jdbc/"> jdbc </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                3 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <p>在基本的 <code>DataSource</code> 实现中，客户端的 Connection 对象与物理数据库连接有着1:1的关系。当 Connection 被关闭以后，物理连接也会被关闭。因此，连接的频繁打开、初始化以及关闭，会在一个客户端会话中上演多次，带来了过重的性能消耗。
+而连接池就能解决这个问题，连接池维护了一系列物理数据库连接的缓存，可以被多个客户端会话重复使用。连接池能够极大地提高性能和可扩展性，特别是在一个三层架构的环境中，大量的客户端可以共享一个数量比较小的物理数据库连接池。在图11-1中，JDBC 驱动提供了一个 ConnectionPoolDataSource 的实现，应用服务器可以用它来创建和管理连接池。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-11/connections.png" alt="连接池datasource" class="lazyload"><figcaption class="image-caption">连接池datasource</figcaption></figure></p>
+<p>连接池的管理策略跟具体的实现有关，也跟具体的应用服务器有关。应用服务器对客户端提供了一个 DataSource 接口的具体实现，使得连接池化对于客户端来说是透明的。最终，客户端使用 DataSource API 就能和之前使用 JNDI 一样，获得了更好的性能和可扩展性。</p>
+<p>下文将会介绍 ConnectionPoolDataSource 接口、PooledConnection 接口以及 ConnectionEvent 类，这三个组成部分是一个相互合作的关系，下文将以一个经典线程池的实现的角度，逐步描述这几部分。这一章也会介绍基本的 DataSource 对象和池化的 DataSource 对象之间的区别，此外，还会讨论一个池化的连接如何能够维护一堆可重用的 PreparedStatement 对象。</p>
+<p>尽管本章中的所有讨论都是假设在三层架构环境下的，但连接的池化在两层架构的环境下也同样有用。
+在两层架构的环境中，JDBC 驱动既实现了 DataSource 接口，也实现 ConnectionPoolDataSource 接口，这种实现方式允许客户端打开或者关闭多个连接。</p>
+<h1 id="111-connectionpooldatasource-和-pooledconnection">11.1 ConnectionPoolDataSource 和 PooledConnection</h1>
+<p>一般来说， 一个 JDBC 驱动会去实现 ConnectionPoolDataSource 接口，应用服务器可以使用这个接口来获得 PooledConnection 对象，以下代码展示了 getPooledConnection 方法的两种版本</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">ConnectionPoolDataSource</span> <span style="color:#f92672">{</span>
+    PooledConnection <span style="color:#a6e22e">getPooledConnection</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> SQLException<span style="color:#f92672">;</span>
+    PooledConnection <span style="color:#a6e22e">getPooledConnection</span><span style="color:#f92672">(</span>String user<span style="color:#f92672">,</span> String password<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> SQLException<span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>一个 PooledConnection 对象代表一条与数据源之间的物理连接。JDBC 驱动对于 PooledConnection 的实现，则会封装所有与维护这条连接相关的细节。
+应用服务器则会在它的 DataSource 接口的实现中，缓存和重用这些 PooledConnection。当客户端调用 DataSource.getConnection 方法时，应用服务器将会使用物理 PooledConnection 去获取一个逻辑 Connection 对象。以下代码是 PooledConnection 接口的一些方法定义：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">PooledConnection</span> <span style="color:#f92672">{</span>
+    Connection <span style="color:#a6e22e">getConnection</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> SQLException<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">close</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> SQLException<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addConnectionEventListener</span><span style="color:#f92672">(</span>
+    ConnectionEventListener listener<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addStatementEventListener</span><span style="color:#f92672">(</span>
+    StatementEventListener listener<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">removeConnectionEventListener</span><span style="color:#f92672">(</span>
+    ConnectionEventListener listener<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">removeStatementEventListener</span><span style="color:#f92672">(</span>
+    StatementEventListener listener<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>当客户端使用完连接以后，它使用 Connection.close 方法来关闭这条逻辑连接，这个动作只是关闭了逻辑连接，但并不会关闭物理连接。物理连接会被归还到池子里，以待重用。
+在这里，连接的池化对于客户端来说完全是透明的，客户端能像使用非池化连接那样去使用池化连接。</p>
+<blockquote>
+<p>需要注意的是，当对池化的连接调用 Connection.close() 方法时，之前通过 Connection.setClientInfo 设置的属性将会被清除掉。</p>
+</blockquote>
+<h1 id="112-连接事件">11.2 连接事件</h1>
+<p>回忆先前说过的，当 Connection.close 方法被调用后，底层的物理连接 PooledConnection 就可以再次被重用。当一个 PooledConnection 可以被回收的时候，将会使用 JavaBean 风格的事件去通知连接池管理器（应用服务器）。
+为了发生连接事件时能被通知到，连接池管理器必须实现 ConnectionEventListener 接口，然后 PooledConnection 会将其注册为连接事件的一个监听者。ConnectionEventListener 接口定义了两个方法，也体现出了可能发生的两种不同的事件：</p>
+<ul>
+<li>connectionClosed 事件 &mdash; 当逻辑连接 Connection.close 被调用时产生此事件</li>
+<li>connectionErrorOccurred &mdash; 当出现一些致命的错误，比如说数据库宕机导致连接丢失的时候，会触发这个事件</li>
+</ul>
+<p>连接池管理器通过调用 PooledConnection.addConnectionEventListener 方法来将自己注册为一个 PooledConnection 的监听者。一般情况下，注册的动作都发生在将连接归还到池子里之前。
+JDBC 驱动负责在对应的事件发生的时候，调用回调方法，这两个方法都需要一个 ConnectionEvent 对象作为参数，通过这个对象可以判断到底是哪个 PooledConnection 被关闭了或者发生了错误。
+当客户端关闭了逻辑连接的时候，JDBC 驱动会通过调用监听者所实现的 connectionClosed 方法来通知监听者，此时，监听者（连接池管理器）可以将该连接归还到池子里以便重用。当致命性错误发生时，JDBC 驱动首先会调用监听者实现的 connectionErrorOccurred 方法，然后再抛出一个 SQLException 异常。这个时候，监听者就可以通过 PooledConnection.close 方法来将物理连接关闭。</p>
+<h1 id="113-三层架构环境中的连接池化">11.3 三层架构环境中的连接池化</h1>
+<p>以下步骤列出了客户端使用连接池池化时，实际上发生的事情：</p>
+<ul>
+<li>客户端调用 DataSource.getConnection 方法</li>
+<li>应用服务器在它自己支持连接池的 DataSource 实现中，查找是否有可用的 PooledConnection 对象</li>
+<li>如果没有可用的 PooledConnection 对象，应用服务器调用 ConnectionPoolDataSource.getPooledConnection 来创建一条物理连接，JDBC 驱动的具体实现会负责连接创建的具体细节，并把它交给应用服务器管理。</li>
+<li>无论是新建的 PooledConnection 还是已经创建好的处于可用状态的，应用服务器会对这条连接进行一些标识，标记它处于正在使用的状态。</li>
+<li>应用服务器调用 PooledConnection.getConnection 方法来获得一个逻辑上的 Connection 对象，这个对象底层实际上关联了一个物理的 PooledConnection 对象，客户端调用 DataSource.getConnection 方法，返回值拿到的是逻辑上的 Connection 对象。</li>
+<li>应用服务器通过调用 PooledConnection.addConnectionEventListener 方法将它自己注册为一个 ConnectionEventListener，当 PooledConnection 处于可用状态时，应用服务器就会得到相应的事件通知。</li>
+<li>由 DataSource.getConnection 方法返回的逻辑 Connection 对象，依然是使用 Connection API，直到 Connection.close 被调用之前，底层的 PooledConnection 都处于使用状态，不可被重用。</li>
+</ul>
+<p>即使在没有应用服务器的两层架构环境中，连接依然可以做到池化。这种情况下，JDBC 驱动需要实现 DataSource 接口和 ConnectionPoolDataSource 接口。</p>
+<h1 id="114-datasource-实现与连接池化">11.4 DataSource 实现与连接池化</h1>
+<p>抛开对性能和扩展性的提升不说，客户端使用 DataSource 接口的时候，不需要去关心它底层的实现是否池化，客户端面向的是一套统一的，无差别的使用方式。
+常规的 DataSource 实现，即不实现连接池化功能的实现，一般由 JDBC 驱动实现，通常有以下两个观点被认为是正确的：</p>
+<ul>
+<li>DataSource.getConnection 方法创建一个新的 Connection 对象来代表一条真正的物理连接，并且封装了所有维护和管理这条物理连接的细节。</li>
+<li>Connection.close 方法关闭底层的物理连接并释放相关的资源</li>
+</ul>
+<p>在一个实现了池化的 DataSource 实现中，情况则有些不一样，以下几个观点被认为是正确的：</p>
+<ul>
+<li>在 DataSource 的实现中，包含了一个提供了连接池化功能的模块，这个模块要怎么实现没有一个统一的标准，因人而异。这个模块会缓存一系列 PooledConnection 对象。DataSource 的实现类，通常处于驱动实现的 ConnectionPoolDataSource 和 PooledConnection 接口的上层。</li>
+<li>DataSource.getConnection 方法会调用 PooledConnection 方法去获得对底层物理连接的一个句柄，如果已有的连接池里没有现成可用的连接，那么这个时候就需要新建物理连接，只有在这种情况下，新建物理连接对性能的消耗才体现出来。当需要创建新的物理连接的时候，ConnectionPoolDataSource 的 getPooledConnection 会被调用，对于物理连接的管理细节，则委托给了 PooledConnection 对象。</li>
+<li>Connection.close 方法被调用时，只是关闭逻辑上的连接句柄，并不会关闭实际上的物理连接。连接池管理者此时会收到一个事件通知，被告知一个 PooledConnection 处于可重用状态了。如果此时客户端仍然企图使用这个逻辑上的连接句柄，那么只会得到一个 SQLException 异常。</li>
+<li>一个物理 PooledConnection 在它的整个生命周期中，可能会产生许多的逻辑 Connection 对象，但只有最近一次产生的 Connection 对象才是有效的，当 PooledConnection.getConnection 方法被调用时，先前已经存在的 Connection 对象，将会被自动关闭。这种情况下，关闭不会产生相应的事件去通知监听者。</li>
+</ul>
+<blockquote>
+<p>这给了应用服务器一种从客户端强行拿走连接的方式，这种情形可能很少见，但是当应用服务器需要进行强制关闭时，这个特性可能会很有用</p>
+</blockquote>
+<ul>
+<li>连接池的管理者通过调用 PooledConnection.close 方法来关闭物理连接，一般发生以下情况时，才会这么做：当应用服务器正常退出时，当需要重新初始化连接的缓存时，或者是该连接上发生一些不可恢复的致命性错误时。</li>
+</ul>
+<h1 id="115-部署">11.5 部署</h1>
+<p>进行连接池化的部署，需要提供一个客户端代码可以接触到的 DataSource 对象，并且还需要把一个 ConnectionPoolDataSource 对象注册到 JNDI 中。
+第一步，部署 ConnectionPoolDataSource，如下代码所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// ConnectionPoolDS implements the ConnectionPoolDataSource
+</span><span style="color:#75715e">// interface. Create an instance and set properties.
+</span><span style="color:#75715e"></span>com<span style="color:#f92672">.</span><span style="color:#a6e22e">acme</span><span style="color:#f92672">.</span><span style="color:#a6e22e">jdbc</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ConnectionPoolDS</span> cpds <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> com<span style="color:#f92672">.</span><span style="color:#a6e22e">acme</span><span style="color:#f92672">.</span><span style="color:#a6e22e">jdbc</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ConnectionPoolDS</span><span style="color:#f92672">();</span>
+cpds<span style="color:#f92672">.</span><span style="color:#a6e22e">setServerName</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>bookserver<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">);</span>
+cpds<span style="color:#f92672">.</span><span style="color:#a6e22e">setDatabaseName</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>booklist<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">);</span>
+cpds<span style="color:#f92672">.</span><span style="color:#a6e22e">setPortNumber</span><span style="color:#f92672">(</span>9040<span style="color:#f92672">);</span>
+cpds<span style="color:#f92672">.</span><span style="color:#a6e22e">setDescription</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>Connection pooling <span style="color:#66d9ef">for</span> bookserver<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">);</span>
+<span style="color:#75715e">// Register the ConnectionPoolDS with JNDI, using the logical name
+</span><span style="color:#75715e">// “jdbc/pool/bookserver_pool”
+</span><span style="color:#75715e"></span>Context ctx <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> InitialContext<span style="color:#f92672">();</span>
+ctx<span style="color:#f92672">.</span><span style="color:#a6e22e">bind</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>jdbc<span style="color:#f92672">/</span>pool<span style="color:#f92672">/</span>bookserver_pool<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">,</span> cpds<span style="color:#f92672">);</span>    
+</code></pre></div><p>上述步骤做好以后，ConnectionPoolDataSource 对象就可以被对客户端代码可见的 DataSource 使用了，DataSource 的部署需要依赖于先前部署的 ConnectionPoolDataSource，如下代码所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// PooledDataSource implements the DataSource interface.
+</span><span style="color:#75715e">// Create an instance and set properties.
+</span><span style="color:#75715e"></span>com<span style="color:#f92672">.</span><span style="color:#a6e22e">acme</span><span style="color:#f92672">.</span><span style="color:#a6e22e">appserver</span><span style="color:#f92672">.</span><span style="color:#a6e22e">PooledDataSource</span> ds <span style="color:#f92672">=</span>
+<span style="color:#66d9ef">new</span> com<span style="color:#f92672">.</span><span style="color:#a6e22e">acme</span><span style="color:#f92672">.</span><span style="color:#a6e22e">appserver</span><span style="color:#f92672">.</span><span style="color:#a6e22e">PooledDataSource</span><span style="color:#f92672">();</span>
+ds<span style="color:#f92672">.</span><span style="color:#a6e22e">setDescription</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>Datasource with connection pooling<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">);</span>
+<span style="color:#75715e">// Reference the previously registered ConnectionPoolDataSource
+</span><span style="color:#75715e"></span>ds<span style="color:#f92672">.</span><span style="color:#a6e22e">setDataSourceName</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>jdbc<span style="color:#f92672">/</span>pool<span style="color:#f92672">/</span>bookserver_pool<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">);</span>
+<span style="color:#75715e">// Register the DataSource implementation with JNDI, using the logical
+</span><span style="color:#75715e">// name “jdbc/bookserver”.
+</span><span style="color:#75715e"></span>Context ctx <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> InitialContext<span style="color:#f92672">();</span>
+ctx<span style="color:#f92672">.</span><span style="color:#a6e22e">bind</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">“</span>jdbc<span style="color:#f92672">/</span>bookserver<span style="color:#960050;background-color:#1e0010">”</span><span style="color:#f92672">,</span> ds<span style="color:#f92672">);</span>
+</code></pre></div><p>到此，客户端代码就可以使用这个 DataSource 了。</p>
+<h1 id="116-池化连接的-statement-重用">11.6 池化连接的 Statement 重用</h1>
+<p>JDBC 规范对于 statement 的池化也提供了一些支持。statement 池化这个特性，能让应用层像 connection 重用一样，对 PreparedStatement 进行重用，这个特性需要以连接池化为基础。
+下图展示了 PooledConnection 与 PreparedStament 之间的关系。逻辑 Connection 可以透明地使用多个 PreparedStatement 对象。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/jdbc4.2-spec-11/statements.png" alt="PooledConnection 与 PreparedStament 的关系" class="lazyload"><figcaption class="image-caption">PooledConnection 与 PreparedStament 的关系</figcaption></figure></p>
+<p>上图中，连接池和 statement 池由应用服务器来实现。不过，这些功能其实也可以由驱动来实现，或者是数据源来实现。这里我们对于 statement 池化的讨论，其实是适用于以上提到的所有实现方式的。</p>
+<h2 id="1161-使用池化-statement">11.6.1 使用池化 Statement</h2>
+<p>对于 statement 的重用，必须对应用透明。也就是说，从应用开发的角度，对一个 statement 的使用，不需要关心它是否是池化的实现。statement 在底层会一直保持处于打开状态，应用层的代码也不需要改变。如果应用层关闭了这个 statement，它依然需要调用 Connection.prepareStatement 方法来继续使用它。statement 的池化对于应用层来说，使用方式上是透明的，应用层唯一能感知到不同的，是它带来的明显的性能提升。
+应用层需要通过调用 DatabaseMetadata 的 supportStatementPooling 方法，来判断一个数据源是否支持 statement 重用。
+在很多情况下，对于 statement 的重用，是一种非常有意义的优化，尤其是负责的 prepared statement。不过，需要注意的是，大量的 statement 处于打开状态，有可能会对资源带来影响。</p>
+<h2 id="1162-关闭池化-statement">11.6.2 关闭池化 Statement</h2>
+<p>一旦应用层关闭了一个 statement，无论它是否是池化的，它都不能再继续被使用了，否则会导致异常抛出。
+以下几个方法会关闭一个池化的 statement:</p>
+<ul>
+<li>Statement.close &mdash; 由应用层调用。如果一个 statement 是池化的，调用这个方法会关闭逻辑上的 statement，但不会关闭底层的已经池化的物理 statement。</li>
+<li>Connection.close &mdash; 由应用层调用。
+<ul>
+<li>非池化连接 &mdash; 关闭底层的物理连接和由这个连接创建的所有 statement。这样做是必要的，因为垃圾回收机制无法检测到外部的资源什么时候会被释放。</li>
+<li>池化连接 &mdash; 仅关闭逻辑上的连接和这个连接所创建的逻辑 statement，底层的物理连接以及相关的 statement 不会被关闭。</li>
+</ul>
+</li>
+<li>PooledConnection.close &mdash; 由连接池管理者调用。会关闭底层的物理连接以及所有相关的 statement。</li>
+</ul>
+<p>应用层无法直接关闭一个已经池化的物理 statement，这是连接池管理器做的事情。PooledConnection.close 方法关闭物理连接以及所有的关联 statement，释放掉相关的资源。
+应用层也无法直接控制 statement 应该如何被池化。一个池化的 statement 总是与一个 PooledConnection 相关联的，ConnectionPoolDataSource 可以用来对池化做一些属性设置。</p>
+<h1 id="117-statement-事件">11.7 statement 事件</h1>
+<p>如果连接池管理器支持 statement 池化，它必须实现 StatementEventListener 接口，然后将自己注册为 PooledConnection 对象的监听者。这个接口定义了以下两个方法，用来监听有可能发生在一个 PreparedStatement 对象上的两种事件。</p>
+<ul>
+<li>statementClosed &mdash; 当与 PooledConnection 对象相关联的逻辑 PreparedStatement 对象被关闭时触发，也就是说，当应用层调用 PreparedStatement.close 方法时。</li>
+<li>statementErrorOccurred &mdash; 当 JDBC 驱动监测到 PreparedStatement 对象不可用时触发。</li>
+</ul>
+<p>连接池管理器通过  PooledConnection.addStatementEventListener 方法将自己注册为监听者。一般来说，在连接池管理器返回一个 PreparedStatement 对象给应用层使用之前，它必须先把自己注册为一个监听者。
+当对应的事件发生时，驱动会调用 StatementEventListener 的 statementClosed 方法和 statementErrorOccurred 方法，这两个方法都接收一个 statementEvent 对象作为参数，这个参数就可以用来判断是发生了关闭事件还是异常事件。当 JDBC 应用关闭逻辑 statement ，或者一些错误发生时，JDBC 驱动会调用相关的方法，这个时候，连接池管理器它就可以将这个 statement 放回池子以便重用，或者是抛出异常。</p>
+<h1 id="118-connectionpooldatasource-属性">11.8 ConnectionPoolDataSource 属性</h1>
+<p>JDBC 的 API 定义了一系列的属性来设置与池化相关的属性：
+|属性名|类型|描述|
+|&mdash;|&mdash;|&mdash;|
+|maxStatements|int|允许池化的最大 statement 数，0 代表不池化|
+|initialPoolSize|int|当连接池创建时需要创建的初始物理连接数|
+|minPoolSize|int|连接池最小物理连接数|
+|maxPoolSize|int|连接池最大物理连接数，0代表无限制|
+|maxIdleTime|int|连接空闲最大空闲时间，0代表无限制|
+|propertyCycle|int|属性生效时间，单位为秒|</p>
+<p>连接池的配置风格遵循 JavaBean 风格。连接池厂商如果需要增加配置属性，那这些新增的属性名不应与已有的标准属性名重复。
+与 DataSource 的实现一样，ConnectionPoolDataSource 的实现也必须为每个属性增加 setter 和 getter 方法，以下代码是一个示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">VendorConnectionPoolDS vcp <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> VendorConnectionPoolDS<span style="color:#f92672">();</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setMaxStatements</span><span style="color:#f92672">(</span>25<span style="color:#f92672">);</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setInitialPoolSize</span><span style="color:#f92672">(</span>10<span style="color:#f92672">);</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setMinPoolSize</span><span style="color:#f92672">(</span>1<span style="color:#f92672">);</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setMaxPoolSize</span><span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setMaxIdleTime</span><span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+vcp<span style="color:#f92672">.</span><span style="color:#a6e22e">setPropertyCycle</span><span style="color:#f92672">(</span>300<span style="color:#f92672">);</span>
+</code></pre></div><p>应用服务器会根据设置的属性，来决定应该如何管理相关的池子。
+ConnectionPoolDataSource 的配置属性无须被 JDBC 客户端直接访问。一些管理工具需要访问的话，建议通过反射的方式。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>590</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fjdbc4.2-spec-11%2f&amp;appkey=&amp;title=JDBC4.2%e8%a7%84%e8%8c%83-%e7%ac%ac%e5%8d%81%e4%b8%80%e7%ab%a0%20%e8%bf%9e%e6%8e%a5%e6%b1%a0" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/jdbc4.2-spec-10/" class="prev" rel="prev" title="JDBC4.2规范-第十章 事务"><i class="iconfont icon-dajiantou"></i>&nbsp;JDBC4.2规范-第十章 事务</a>
+         
+        
+        <a href="/2019/about-time/" class="next" rel="next" title="关于时间的想法">关于时间的想法&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-01-02 21:58:47 \u002b0800 CST',
+              title: 'JDBC4.2规范-第十一章 连接池',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
