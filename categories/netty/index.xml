@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>netty on beanlam</title>
+    <link>/categories/netty/</link>
+    <description>Recent content in netty on beanlam</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>cn</language>
+    <lastBuildDate>Fri, 07 Jul 2017 22:35:04 +0800</lastBuildDate>
+    
+	<atom:link href="/categories/netty/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Netty4.x ByteBuf 基本机制及其骨架实现</title>
+      <link>/2017/netty-bytebuf/</link>
+      <pubDate>Fri, 07 Jul 2017 22:35:04 +0800</pubDate>
+      
+      <guid>/2017/netty-bytebuf/</guid>
+      <description>概述 netty 是一个 NIO 框架，在 JDK API 已提供相对直接的 NIO Library 的情况下，几乎很少的软件系统会直接用 NIO 进行编程，也很少有开发者会直接使用 NIO 技术开发网络相关的程序。因为 native nio library 已饱受诟病，API 难用，容易出错，存在一些声称解决但还没解决的 bug（bug id = 6403933，JDK 1.7 声称解决了该 Bug，但实际上只是降低了该 bug 发生的概率），使用 native nio library 来开发可靠性、鲁棒性高的网络程序，工作量以及出错率都要更高，使用 netty 框架，就是为了解决这些问题。
+ByteBuffer 的忏悔 基于 NIO 非阻塞模型的编程，基本上是面向数据容器编程，BIO 与 NIO 除了它们在阻塞 IO 线程方面有所不同外，它们在操作数据方面是有一些共性的，那就是从网络流中读数据，并放入一个容器中。 对于 BIO 来说，大多数时候，这个容器就是一个字节数组
+byte[] buf = new byte[8196]; int cnt = 0; while ((cnt = input.read(buf)) != -1) { //...... } 在这里，容器就是指 buf 这个字节数组。而在 NIO 中，容器是指 ByteBuffer，由于 NIO 编程的复杂性，需要解决类似于 TCP 半包问题等，因此对这个容器的要求不仅仅是“存储数据”那么简单，还希望这个容器能提供另外的功能，这是 ByteBuffer 存在的原因，它提供了一些方便的 API，让开发者操作底层的字节数组。 然而 ByteBuffer 存在几个不得人心的缺点：</description>
+    </item>
+    
+    <item>
+      <title>Netty4.x Internal Logger 机制</title>
+      <link>/2016/netty-internal-logger/</link>
+      <pubDate>Sat, 25 Jun 2016 22:43:12 +0800</pubDate>
+      
+      <guid>/2016/netty-internal-logger/</guid>
+      <description>简介 Netty是一个简化Java NIO编程的网络框架。就像人要吃饭一样，框架也要打日志。 Netty不像大多数框架，默认支持某一种日志实现。相反，Netty本身实现了一套日志机制，但这套日志机制并不会真正去打日志。相反，Netty自身的日志机制更像一个日志包装层。
+日志框架检测顺序 Netty在启动的时候，会自动去检测当前Java进程的classpath下是否已经有其它的日志框架。 检查的顺序是： 先检查是否有slf4j，如果没有则检查是否有Log4j，如果上面两个都没有，则默认使用JDK自带的日志框架JDK Logging。 JDK的Logging就不用费事去检测了，直接拿来用了，因为它是JDK自带的。
+ 注意到虽然Netty支持Common Logging，但在Netty本文所用的4.10.Final版本的代码里，没有去检测Common Logging，即使有支持Common Logging的代码存在。
+ 日志框架检测细节 在Netty自身的代码里面，如果需要打日志，会通过以下代码来获得一个logger，以io.netty.bootstrap.Bootstrap这个类为例，读者可以翻开这个类瞧一瞧。
+private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class); 要知道Netty是怎么得到logger的，关键就在于这个InternalLoggerFactory类了，可以看出来，所有的logger都是通过这个工厂类产生的。 翻开InternalLoggerFactory类的代码，可以看到类中有一个静态初始化块
+private static volatile InternalLoggerFactory defaultFactory; static { final String name = InternalLoggerFactory.class.getName(); InternalLoggerFactory f; try { f = new Slf4JLoggerFactory(true); f.newInstance(name).debug(&amp;#34;Using SLF4J as the default logging framework&amp;#34;); defaultFactory = f; } catch (Throwable t1) { try { f = new Log4JLoggerFactory(); f.newInstance(name).debug(&amp;#34;Using Log4J as the default logging framework&amp;#34;); } catch (Throwable t2) { f = new JdkLoggerFactory(); f.</description>
+    </item>
+    
+  </channel>
+</rss>

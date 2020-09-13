@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/logback-usage/" />
+  <link rel="next" href="/2017/druid-sql-parser/" />
+  <link rel="canonical" href="/2017/java-trouble-shooting/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           Java Trouble Shooting | beanlam
+       
+  </title>
+  <meta name="title" content="Java Trouble Shooting | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Java Trouble Shooting"/>
+<meta name="twitter:description" content="什么是线程栈(thread dump) 线程栈是某个时间点，JVM所有线程的活动状态的一个汇总；通过线程栈，可以查看某个时间点，各个线程正在做什么，通常使用线程栈来定位软件运行时的各种问题，例如 CPU 使用率特别高，或者是响应很慢，性能大幅度下滑。
+线程栈包含了多个线程的活动信息，一个线程的活动信息通常看起来如下所示：
+&#34;main&#34; prio=10 tid=0x00007faac0008800 nid=0x9f0 waiting on condition [0x00007faac6068000] java.lang.Thread.State: TIMED_WAITING (sleeping) at java.lang.Thread.sleep(Native Method) at ThreadDump.main(ThreadDump.java:4) 这条线程的线程栈信息包含了以下这些信息：
+ 线程的名字：其中 main 就是线程的名字，需要注意的是，当使用 Thread 类来创建一条线程，并且没有指定线程的名字时，这条线程的命名规则为 Thread-i，i 代表数字。如果使用 ThreadFactory 来创建线程，则线程的命名规则为 pool-i-thread-j，i 和 j 分别代表数字。 线程的优先级：prio=10 代表线程的优先级为 10 线程 id：tid=0x00007faac0008800 代表线程 id 为 0x00007faac0008800，而** nid=0x9f0** 代表该线程对应的操作系统级别的线程 id。所谓的 nid，换种说法就是 native id。在操作系统中，分为内核级线程和用户级线程，JVM 的线程是用户态线程，内核不知情，但每一条 JVM 的线程都会映射到操作系统一条具体的线程 线程的状态：java.lang.Thread.State: TIMED_WAITING (sleeping) 以及 waiting on condition 代表线程当前的状态 线程占用的内存地址：[0x00007faac6068000] 代表当前线程占用的内存地址 线程的调用栈：at java.lang.Thread.sleep(Native Method) 以及它之后的相类似的信息，代表线程的调用栈  回顾线程状态  NEW：线程初创建，未运行 RUNNABLE：线程正在运行，但不一定消耗 CPU BLOCKED：线程正在等待另外一个线程释放锁 WAITING：线程执行了 wait, join, park 方法 TIMED_WAITING：线程调用了sleep, wait, join, park 方法，与 WAITING 状态不同的是，这些方法带有表示时间的参数。  例如以下代码："/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Java Trouble Shooting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/java-trouble-shooting\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  1453 ,
+  "url": "\/2017\/java-trouble-shooting\/",
+  "datePublished": "2017-06-06T18:33:55\u002b08:00",
+  "dateModified": "2017-06-06T18:33:55\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">Java Trouble Shooting</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-06-06 >6 June 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/java/"> java </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                7 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="什么是线程栈thread-dump">什么是线程栈(thread dump)</h1>
+<p>线程栈是某个时间点，JVM所有线程的活动状态的一个汇总；通过线程栈，可以查看某个时间点，各个线程正在做什么，通常使用线程栈来定位软件运行时的各种问题，例如 CPU 使用率特别高，或者是响应很慢，性能大幅度下滑。</p>
+<p>线程栈包含了多个线程的活动信息，一个线程的活动信息通常看起来如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#e6db74">&#34;main&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007faac0008800 nid<span style="color:#f92672">=</span>0x9f0 waiting on condition <span style="color:#f92672">[</span>0x00007faac6068000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: TIMED_WAITING <span style="color:#f92672">(</span>sleeping<span style="color:#f92672">)</span>
+        at java.lang.Thread.sleep<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        at ThreadDump.main<span style="color:#f92672">(</span>ThreadDump.java:4<span style="color:#f92672">)</span>
+</code></pre></div><p>这条线程的线程栈信息包含了以下这些信息：</p>
+<ul>
+<li>线程的名字：其中 <strong>main</strong> 就是线程的名字，需要注意的是，当使用 <code>Thread</code> 类来创建一条线程，并且没有指定线程的名字时，这条线程的命名规则为 <strong>Thread-i</strong>，i 代表数字。如果使用 <code>ThreadFactory</code> 来创建线程，则线程的命名规则为 <strong>pool-i-thread-j</strong>，i 和 j 分别代表数字。</li>
+<li>线程的优先级：<strong>prio=10</strong> 代表线程的优先级为 10</li>
+<li>线程 id：<strong>tid=0x00007faac0008800</strong> 代表线程 id 为 0x00007faac0008800，而** nid=0x9f0** 代表该线程对应的操作系统级别的线程 id。所谓的 nid，换种说法就是 native id。在操作系统中，分为内核级线程和用户级线程，JVM 的线程是用户态线程，内核不知情，但每一条 JVM 的线程都会映射到操作系统一条具体的线程</li>
+<li>线程的状态：<strong>java.lang.Thread.State: TIMED_WAITING (sleeping)</strong> 以及 <strong>waiting on condition</strong> 代表线程当前的状态</li>
+<li>线程占用的内存地址：<strong>[0x00007faac6068000]</strong> 代表当前线程占用的内存地址</li>
+<li>线程的调用栈：<strong>at java.lang.Thread.sleep(Native Method)</strong> 以及它之后的相类似的信息，代表线程的调用栈</li>
+</ul>
+<h1 id="回顾线程状态">回顾线程状态</h1>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/java-trouble-shooting/thread-state.png" alt="线程状态" class="lazyload"><figcaption class="image-caption">线程状态</figcaption></figure></p>
+<ul>
+<li>NEW：线程初创建，未运行</li>
+<li>RUNNABLE：线程正在运行，但<strong>不一定消耗 CPU</strong></li>
+<li>BLOCKED：线程正在等待另外一个线程释放锁</li>
+<li>WAITING：线程执行了 <code>wait, join, park</code> 方法</li>
+<li>TIMED_WAITING：线程调用了<code>sleep, wait, join, park</code> 方法，与 WAITING 状态不同的是，这些方法带有表示时间的参数。</li>
+</ul>
+<p>例如以下代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">int</span> sum <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
+            sum <span style="color:#f92672">=</span> i <span style="color:#f92672">+</span> j<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>main 线程对应的线程栈就是</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#e6db74">&#34;main&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007fe1b4008800 nid<span style="color:#f92672">=</span>0x1292 runnable <span style="color:#f92672">[</span>0x00007fe1bd88f000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+        at ThreadDump.main<span style="color:#f92672">(</span>ThreadDump.java:7<span style="color:#f92672">)</span>
+</code></pre></div><p>其状态为 RUNNABLE</p>
+<p>如果是以下代码，两个线程会竞争同一个锁，其中只有一个线程能获得锁，然后进行 sleep(time)，从而进入 TIMED_WAITING 状态，另外一个线程由于等待锁，会进入 BLOCKED 状态。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+
+        Thread t1 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Runnable<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+
+            <span style="color:#a6e22e">@Override</span>
+            <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                    fun1<span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>InterruptedException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    e<span style="color:#f92672">.</span><span style="color:#a6e22e">printStackTrace</span><span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">});</span>
+        
+        t1<span style="color:#f92672">.</span><span style="color:#a6e22e">setDaemon</span><span style="color:#f92672">(</span><span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+        t1<span style="color:#f92672">.</span><span style="color:#a6e22e">setName</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;MyThread1&#34;</span><span style="color:#f92672">);</span>
+        
+        Thread t2 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Runnable<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+            
+            <span style="color:#a6e22e">@Override</span>
+            <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                    fun2<span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>InterruptedException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    e<span style="color:#f92672">.</span><span style="color:#a6e22e">printStackTrace</span><span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">});</span>
+        
+        t2<span style="color:#f92672">.</span><span style="color:#a6e22e">setDaemon</span><span style="color:#f92672">(</span><span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+        t2<span style="color:#f92672">.</span><span style="color:#a6e22e">setName</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;MyThread2&#34;</span><span style="color:#f92672">);</span>
+        t1<span style="color:#f92672">.</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+        t2<span style="color:#f92672">.</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">*/</span>
+        
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;t1 acquire&#34;</span><span style="color:#f92672">);</span>
+        Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>Integer<span style="color:#f92672">.</span><span style="color:#a6e22e">MAX_VALUE</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun2</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;t2 acquire&#34;</span><span style="color:#f92672">);</span>
+        Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>Integer<span style="color:#f92672">.</span><span style="color:#a6e22e">MAX_VALUE</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>对应的线程栈为：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#e6db74">&#34;MyThread2&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007ff1e40b1000 nid<span style="color:#f92672">=</span>0x12eb waiting <span style="color:#66d9ef">for</span> monitor entry <span style="color:#f92672">[</span>0x00007ff1e07f6000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: BLOCKED <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at ThreadDump.fun2<span style="color:#f92672">(</span>ThreadDump.java:45<span style="color:#f92672">)</span>
+        - waiting to lock &lt;0x00000000eb8602f8&gt; <span style="color:#f92672">(</span>a java.lang.Class <span style="color:#66d9ef">for</span> ThreadDump<span style="color:#f92672">)</span>
+        at ThreadDump.access$100<span style="color:#f92672">(</span>ThreadDump.java:1<span style="color:#f92672">)</span>
+        at ThreadDump$2.run<span style="color:#f92672">(</span>ThreadDump.java:25<span style="color:#f92672">)</span>
+        at java.lang.Thread.run<span style="color:#f92672">(</span>Thread.java:745<span style="color:#f92672">)</span>
+
+<span style="color:#e6db74">&#34;MyThread1&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007ff1e40af000 nid<span style="color:#f92672">=</span>0x12ea waiting on condition <span style="color:#f92672">[</span>0x00007ff1e08f7000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: TIMED_WAITING <span style="color:#f92672">(</span>sleeping<span style="color:#f92672">)</span>
+        at java.lang.Thread.sleep<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        at ThreadDump.fun1<span style="color:#f92672">(</span>ThreadDump.java:41<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb8602f8&gt; <span style="color:#f92672">(</span>a java.lang.Class <span style="color:#66d9ef">for</span> ThreadDump<span style="color:#f92672">)</span>
+        at ThreadDump.access$000<span style="color:#f92672">(</span>ThreadDump.java:1<span style="color:#f92672">)</span>
+        at ThreadDump$1.run<span style="color:#f92672">(</span>ThreadDump.java:10<span style="color:#f92672">)</span>
+        at java.lang.Thread.run<span style="color:#f92672">(</span>Thread.java:745<span style="color:#f92672">)</span>
+</code></pre></div><p>可以看到，t1 线程的调用栈里有这么一句 ** - locked &lt;0x00000000eb8602f8&gt; (a java.lang.Class for ThreadDump)**，说明它获得了锁，并且进行 sleep(sometime) 操作，因此状态为 TIMED_WAITING。而 t2 线程由于获取不到锁，所以在它的调用栈里能看到 <strong>- waiting to lock &lt;0x00000000eb8602f8&gt; (a java.lang.Class for ThreadDump)</strong>，说明它正在等待锁，因此进入 BLOCKED 状态。</p>
+<p>对于 WAITING 状态的线程栈，可以使用以下代码来模拟制造：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Object lock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>lock<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            lock<span style="color:#f92672">.</span><span style="color:#a6e22e">wait</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>得到的线程栈为：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#e6db74">&#34;main&#34;</span> prio<span style="color:#f92672">=</span>10 tid<span style="color:#f92672">=</span>0x00007f1fdc008800 nid<span style="color:#f92672">=</span>0x13fe in Object<span style="color:#f92672">.</span><span style="color:#a6e22e">wait</span><span style="color:#f92672">()</span> <span style="color:#f92672">[</span>0x00007f1fe1fec000<span style="color:#f92672">]</span>
+   java<span style="color:#f92672">.</span><span style="color:#a6e22e">lang</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Thread</span><span style="color:#f92672">.</span><span style="color:#a6e22e">State</span><span style="color:#f92672">:</span> WAITING <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at java<span style="color:#f92672">.</span><span style="color:#a6e22e">lang</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Object</span><span style="color:#f92672">.</span><span style="color:#a6e22e">wait</span><span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        <span style="color:#f92672">-</span> waiting on <span style="color:#f92672">&lt;</span>0x00000000eb860640<span style="color:#f92672">&gt;</span> <span style="color:#f92672">(</span>a java<span style="color:#f92672">.</span><span style="color:#a6e22e">lang</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Object</span><span style="color:#f92672">)</span>
+        at java<span style="color:#f92672">.</span><span style="color:#a6e22e">lang</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Object</span><span style="color:#f92672">.</span><span style="color:#a6e22e">wait</span><span style="color:#f92672">(</span>Object<span style="color:#f92672">.</span><span style="color:#a6e22e">java</span><span style="color:#f92672">:</span>503<span style="color:#f92672">)</span>
+        at ThreadDump<span style="color:#f92672">.</span><span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>ThreadDump<span style="color:#f92672">.</span><span style="color:#a6e22e">java</span><span style="color:#f92672">:</span>7<span style="color:#f92672">)</span>
+        <span style="color:#f92672">-</span> locked <span style="color:#f92672">&lt;</span>0x00000000eb860640<span style="color:#f92672">&gt;</span> <span style="color:#f92672">(</span>a java<span style="color:#f92672">.</span><span style="color:#a6e22e">lang</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Object</span><span style="color:#f92672">)</span>
+</code></pre></div><h1 id="如何输出线程栈">如何输出线程栈</h1>
+<p>由于线程栈反映的是 JVM 在某个时间点的线程状态，因此分析线程栈时，为避免偶然性，有必要多输出几份进行分析。以下以 HOT SPOT JVM 为例，首先可以通过以下两种方式得到 JVM 的进程 ID。</p>
+<ol>
+<li>jps 命令</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>root@localhost ~<span style="color:#f92672">]</span><span style="color:#75715e"># jps</span>
+<span style="color:#ae81ff">5163</span> ThreadDump
+<span style="color:#ae81ff">5173</span> Jps
+</code></pre></div><ol>
+<li>ps -ef | grep java</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>root@localhost ~<span style="color:#f92672">]</span><span style="color:#75715e"># ps -ef | grep java</span>
+root       <span style="color:#ae81ff">5163</span>   <span style="color:#ae81ff">2479</span>  <span style="color:#ae81ff">0</span> 01:18 pts/0    00:00:00 java ThreadDump
+root       <span style="color:#ae81ff">5185</span>   <span style="color:#ae81ff">2553</span>  <span style="color:#ae81ff">0</span> 01:18 pts/1    00:00:00 grep --color<span style="color:#f92672">=</span>auto java
+</code></pre></div><p>接下来通过 JDK 自带的 jstack 命令</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>root@localhost ~<span style="color:#f92672">]</span><span style="color:#75715e"># jstack 5163</span>
+2017-04-21 01:19:41
+Full thread dump Java HotSpot<span style="color:#f92672">(</span>TM<span style="color:#f92672">)</span> 64-Bit Server VM <span style="color:#f92672">(</span>24.79-b02 mixed mode<span style="color:#f92672">)</span>:
+
+<span style="color:#e6db74">&#34;Attach Listener&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72b8001000 nid<span style="color:#f92672">=</span>0x144c waiting on condition <span style="color:#f92672">[</span>0x0000000000000000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+
+<span style="color:#e6db74">&#34;Service Thread&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4095000 nid<span style="color:#f92672">=</span>0x1433 runnable <span style="color:#f92672">[</span>0x0000000000000000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+
+<span style="color:#e6db74">&#34;C2 CompilerThread1&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4092800 nid<span style="color:#f92672">=</span>0x1432 waiting on condition <span style="color:#f92672">[</span>0x0000000000000000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+
+<span style="color:#e6db74">&#34;C2 CompilerThread0&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4090000 nid<span style="color:#f92672">=</span>0x1431 waiting on condition <span style="color:#f92672">[</span>0x0000000000000000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+
+<span style="color:#e6db74">&#34;Signal Dispatcher&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d408e000 nid<span style="color:#f92672">=</span>0x1430 runnable <span style="color:#f92672">[</span>0x0000000000000000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: RUNNABLE
+
+<span style="color:#e6db74">&#34;Finalizer&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4065000 nid<span style="color:#f92672">=</span>0x142f in Object.wait<span style="color:#f92672">()</span> <span style="color:#f92672">[</span>0x00007f72d9b83000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: WAITING <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at java.lang.Object.wait<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        - waiting on &lt;0x00000000eb804858&gt; <span style="color:#f92672">(</span>a java.lang.ref.ReferenceQueue$Lock<span style="color:#f92672">)</span>
+        at java.lang.ref.ReferenceQueue.remove<span style="color:#f92672">(</span>ReferenceQueue.java:135<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb804858&gt; <span style="color:#f92672">(</span>a java.lang.ref.ReferenceQueue$Lock<span style="color:#f92672">)</span>
+        at java.lang.ref.ReferenceQueue.remove<span style="color:#f92672">(</span>ReferenceQueue.java:151<span style="color:#f92672">)</span>
+        at java.lang.ref.Finalizer$FinalizerThread.run<span style="color:#f92672">(</span>Finalizer.java:209<span style="color:#f92672">)</span>
+
+<span style="color:#e6db74">&#34;Reference Handler&#34;</span> daemon prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4063000 nid<span style="color:#f92672">=</span>0x142e in Object.wait<span style="color:#f92672">()</span> <span style="color:#f92672">[</span>0x00007f72d9c84000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: WAITING <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at java.lang.Object.wait<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        - waiting on &lt;0x00000000eb804470&gt; <span style="color:#f92672">(</span>a java.lang.ref.Reference$Lock<span style="color:#f92672">)</span>
+        at java.lang.Object.wait<span style="color:#f92672">(</span>Object.java:503<span style="color:#f92672">)</span>
+        at java.lang.ref.Reference$ReferenceHandler.run<span style="color:#f92672">(</span>Reference.java:133<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb804470&gt; <span style="color:#f92672">(</span>a java.lang.ref.Reference$Lock<span style="color:#f92672">)</span>
+
+<span style="color:#e6db74">&#34;main&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d4008800 nid<span style="color:#f92672">=</span>0x142c in Object.wait<span style="color:#f92672">()</span> <span style="color:#f92672">[</span>0x00007f72dc971000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: WAITING <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at java.lang.Object.wait<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        - waiting on &lt;0x00000000eb860620&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+        at java.lang.Object.wait<span style="color:#f92672">(</span>Object.java:503<span style="color:#f92672">)</span>
+        at ThreadDump.main<span style="color:#f92672">(</span>ThreadDump.java:7<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb860620&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+
+<span style="color:#e6db74">&#34;VM Thread&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d405e800 nid<span style="color:#f92672">=</span>0x142d runnable 
+
+<span style="color:#e6db74">&#34;VM Periodic Task Thread&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f72d40a0000 nid<span style="color:#f92672">=</span>0x1434 waiting on condition 
+
+JNI global references: <span style="color:#ae81ff">107</span>
+</code></pre></div><p>即可将线程栈输出到控制台。若输出信息过多，在控制台上不方便分析，则可以将输出信息重定向到文件中，如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">jstack <span style="color:#ae81ff">5163</span> &gt; thread.stack
+</code></pre></div><p>若系统中没有 jstack 命令，因为 jstack 命令是 JDK 带的，而有的环境只安装了 JRE 环境。则可以用 kill -3 命令来代替，<code>kill -3 pid</code>。Java虚拟机提供了线程转储(Thread dump)的后门， 通过这个后门， 可以将线程堆栈打印出来。 这个后门就是通过向Java进程发送一个QUIT信号， Java虚拟机收到该信号之后， 将系
+统当前的JAVA线程调用堆栈打印出来。</p>
+<p>若是有运行图形界面的环境，也可以使用一些图形化的工具，例如 JVisualVM 来生成线程栈文件。</p>
+<h1 id="使用线程栈定位问题">使用线程栈定位问题</h1>
+<h2 id="发现死锁">发现死锁</h2>
+<p>当两个或多个线程正在等待被对方占有的锁， 死锁就会发生。 死锁会导致两个线程无法继续运行， 被永远挂起。
+以下代码会产生死锁</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ThreadDump</span> <span style="color:#f92672">{</span>
+    
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        Object lock1 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
+        Object lock2 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
+        
+        <span style="color:#66d9ef">new</span> Thread1<span style="color:#f92672">(</span>lock1<span style="color:#f92672">,</span> lock2<span style="color:#f92672">).</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">new</span> Thread2<span style="color:#f92672">(</span>lock1<span style="color:#f92672">,</span> lock2<span style="color:#f92672">).</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Thread1</span> <span style="color:#66d9ef">extends</span> Thread <span style="color:#f92672">{</span>
+        Object lock1 <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        Object lock2 <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        
+        <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">Thread1</span><span style="color:#f92672">(</span>Object lock1<span style="color:#f92672">,</span> Object lock2<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lock1</span> <span style="color:#f92672">=</span> lock1<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lock2</span> <span style="color:#f92672">=</span> lock2<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">setName</span><span style="color:#f92672">(</span>getClass<span style="color:#f92672">().</span><span style="color:#a6e22e">getSimpleName</span><span style="color:#f92672">());</span>
+        <span style="color:#f92672">}</span>
+        
+        <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>lock1<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                    Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>2<span style="color:#f92672">);</span>
+                <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    e<span style="color:#f92672">.</span><span style="color:#a6e22e">printStackTrace</span><span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span>
+                
+                <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>lock2<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    
+                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Thread2</span> <span style="color:#66d9ef">extends</span> Thread <span style="color:#f92672">{</span>
+        Object lock1 <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        Object lock2 <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        
+        <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">Thread2</span><span style="color:#f92672">(</span>Object lock1<span style="color:#f92672">,</span> Object lock2<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lock1</span> <span style="color:#f92672">=</span> lock1<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lock2</span> <span style="color:#f92672">=</span> lock2<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">setName</span><span style="color:#f92672">(</span>getClass<span style="color:#f92672">().</span><span style="color:#a6e22e">getSimpleName</span><span style="color:#f92672">());</span>
+        <span style="color:#f92672">}</span>
+        
+        <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>lock2<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                    Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>2<span style="color:#f92672">);</span>
+                <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    e<span style="color:#f92672">.</span><span style="color:#a6e22e">printStackTrace</span><span style="color:#f92672">();</span>
+                <span style="color:#f92672">}</span>
+                
+                <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>lock1<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    
+                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>对应的线程栈是</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#e6db74">&#34;Thread2&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f9bf40a1000 nid<span style="color:#f92672">=</span>0x1472 waiting <span style="color:#66d9ef">for</span> monitor entry <span style="color:#f92672">[</span>0x00007f9bf8944000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: BLOCKED <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at ThreadDump$Thread2.run<span style="color:#f92672">(</span>ThreadDump.java:63<span style="color:#f92672">)</span>
+        - waiting to lock &lt;0x00000000eb860498&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb8604a8&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+
+<span style="color:#e6db74">&#34;Thread1&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> tid<span style="color:#f92672">=</span>0x00007f9bf409f000 nid<span style="color:#f92672">=</span>0x1471 waiting <span style="color:#66d9ef">for</span> monitor entry <span style="color:#f92672">[</span>0x00007f9bf8a45000<span style="color:#f92672">]</span>
+   java.lang.Thread.State: BLOCKED <span style="color:#f92672">(</span>on object monitor<span style="color:#f92672">)</span>
+        at ThreadDump$Thread1.run<span style="color:#f92672">(</span>ThreadDump.java:38<span style="color:#f92672">)</span>
+        - waiting to lock &lt;0x00000000eb8604a8&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb860498&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+
+Found one Java-level deadlock:
+<span style="color:#f92672">=============================</span>
+<span style="color:#e6db74">&#34;Thread2&#34;</span>:
+  waiting to lock monitor 0x00007f9be4004f88 <span style="color:#f92672">(</span>object 0x00000000eb860498, a java.lang.Object<span style="color:#f92672">)</span>,
+  which is held by <span style="color:#e6db74">&#34;Thread1&#34;</span>
+<span style="color:#e6db74">&#34;Thread1&#34;</span>:
+  waiting to lock monitor 0x00007f9be40062c8 <span style="color:#f92672">(</span>object 0x00000000eb8604a8, a java.lang.Object<span style="color:#f92672">)</span>,
+  which is held by <span style="color:#e6db74">&#34;Thread2&#34;</span>
+
+Java stack information <span style="color:#66d9ef">for</span> the threads listed above:
+<span style="color:#f92672">===================================================</span>
+<span style="color:#e6db74">&#34;Thread2&#34;</span>:
+        at ThreadDump$Thread2.run<span style="color:#f92672">(</span>ThreadDump.java:63<span style="color:#f92672">)</span>
+        - waiting to lock &lt;0x00000000eb860498&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb8604a8&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+<span style="color:#e6db74">&#34;Thread1&#34;</span>:
+        at ThreadDump$Thread1.run<span style="color:#f92672">(</span>ThreadDump.java:38<span style="color:#f92672">)</span>
+        - waiting to lock &lt;0x00000000eb8604a8&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+        - locked &lt;0x00000000eb860498&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+
+Found <span style="color:#ae81ff">1</span> deadlock.
+</code></pre></div><p>可以看到，当发生了死锁的时候，堆栈中直接打印出了死锁的信息** Found one Java-level deadlock: **，并给出了分析信息。</p>
+<p>要避免死锁的问题， 唯一的办法是修改代码。死锁可能会导致整个系统的瘫痪， 具体的严重程度取决于这些线程执行的是什么性质的功能代码， 要想恢复系统， 临时也是唯一的规避办法是将系统重启。</p>
+<h2 id="定位-cpu-过高的原因">定位 CPU 过高的原因</h2>
+<p>首先需要借助操作系统提供的一些工具，来定位消耗 CPU 过高的 native 线程。不同的操作系统，提供的不同的 CPU 统计命令如下所示：</p>
+<table>
+<thead>
+<tr>
+<th>操作系统</th>
+<th>solaris</th>
+<th>linux</th>
+<th>aix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>命令名称</td>
+<td>prstat -L <!-- raw HTML omitted --></td>
+<td>top -p <!-- raw HTML omitted --></td>
+<td>ps -emo THREAD</td>
+</tr>
+</tbody>
+</table>
+<p>以 Linux 为例，首先通过 top -p <!-- raw HTML omitted --> 输出该进程的信息，然后输入 H，查看所有的线程的统计情况。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">top - 02:04:54 up  2:43,  <span style="color:#ae81ff">3</span> users,  load average: 0.10, 0.05, 0.05
+Threads:  <span style="color:#ae81ff">13</span> total,   <span style="color:#ae81ff">0</span> running,  <span style="color:#ae81ff">13</span> sleeping,   <span style="color:#ae81ff">0</span> stopped,   <span style="color:#ae81ff">0</span> zombie
+%Cpu<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span>:  97.74 us,  0.2 sy,  0.0 ni, 2.22 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem:   <span style="color:#ae81ff">1003456</span> total,   <span style="color:#ae81ff">722012</span> used,   <span style="color:#ae81ff">281444</span> free,        <span style="color:#ae81ff">0</span> buffers
+KiB Swap:  <span style="color:#ae81ff">2097148</span> total,    <span style="color:#ae81ff">62872</span> used,  <span style="color:#ae81ff">2034276</span> free.    <span style="color:#ae81ff">68880</span> cached Mem
+
+PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
+<span style="color:#ae81ff">3368</span> zmw2 <span style="color:#ae81ff">25</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> R 93.3 0.7 5:42.06 java
+<span style="color:#ae81ff">3369</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3370</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3371</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3372</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3373</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3374</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+<span style="color:#ae81ff">3375</span> zmw2 <span style="color:#ae81ff">15</span> <span style="color:#ae81ff">0</span> 256m <span style="color:#ae81ff">9620</span> <span style="color:#ae81ff">6460</span> S 0.0 0.7 0:00.00 java
+</code></pre></div><p>这个命令输出的 PID 代表的是 native 线程的 id，如上所示，id 为 3368 的 native 线程消耗 CPU 最高。在Java Thread Dump文件中， 每个线程都有tid=&hellip;nid=&hellip;的属性， 其中nid就是native thread id， 只不过nid中用16进制来表示。 例如上面的例子中3368的十六进制表示为0xd28.在Java线程中查找nid=0xd28即是本地线程对应Java线程。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#e6db74">&#34;main&#34;</span> prio<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> tid<span style="color:#f92672">=</span>0x0805c988 nid<span style="color:#f92672">=</span>0xd28 runnable <span style="color:#f92672">[</span>0xfff65000..0xfff659c8<span style="color:#f92672">]</span>
+at java.lang.String.indexOf<span style="color:#f92672">(</span>String.java:1352<span style="color:#f92672">)</span>
+at java.io.PrintStream.write<span style="color:#f92672">(</span>PrintStream.java:460<span style="color:#f92672">)</span>
+- locked &lt;0xc8bf87d8&gt; <span style="color:#f92672">(</span>a java.io.PrintStream<span style="color:#f92672">)</span>
+at java.io.PrintStream.print<span style="color:#f92672">(</span>PrintStream.java:602<span style="color:#f92672">)</span>
+at MyTest.fun2<span style="color:#f92672">(</span>MyTest.java:16<span style="color:#f92672">)</span>
+- locked &lt;0xc8c1a098&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+at MyTest.fun1<span style="color:#f92672">(</span>MyTest.java:8<span style="color:#f92672">)</span>
+- locked &lt;0xc8c1a090&gt; <span style="color:#f92672">(</span>a java.lang.Object<span style="color:#f92672">)</span>
+at MyTest.main<span style="color:#f92672">(</span>MyTest.java:26<span style="color:#f92672">)</span>
+</code></pre></div><p>导致 CPU 过高的原因有以下几种原因：</p>
+<ol>
+<li>Java 代码死循环</li>
+<li>Java 代码使用了复杂的算法，或者频繁调用</li>
+<li>JVM 自身的代码导致 CPU 很高</li>
+</ol>
+<p>如果在Java线程堆栈中找到了对应的线程ID,并且该Java线程正在执行Native code,说明导致CPU过高的问题代码在JNI调用中，此时需要打印出 Native 线程的线程栈，在 linux 下，使用 pstack <!-- raw HTML omitted --> 命令。
+如果在 native 线程堆栈中可以找到对应的消耗 CPU 过高的线程 id，可以直接定位为 native 代码的问题。
+但是有可能在 native 线程堆栈中找不到对应的消耗 CPU 过高的线程 id，这可能是因为 JNI 调用中重新创建的线程来执行， 那么在 Java 线程堆栈中就不存在该线程的信息，也有可能是虚拟机自身代码导致的 CPU 过高， 如堆内存使用过高导致的频繁 FULL GC ，或者 JVM 的 Bug。</p>
+<h2 id="定位性能下降原因">定位性能下降原因</h2>
+<p>性能下降一般是由于资源不足所导致。如果资源不足， 那么有大量的线程在等待资源， 打印的线程堆栈如果发现大量的线程停在同样的调用上下文上， 那么就说明该系统资源是瓶颈。
+导致资源不足的原因可能有：</p>
+<ul>
+<li>资源数量配置太少（ 如连接池连接配置过少等）， 而系统当前的压力比较大， 资源不足导致了某些线程不能及时获得资源而等待在那里(即挂起)</li>
+<li>获得资源的线程把持资源时间太久， 导致资源不足，例如以下代码：</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+   Connection conn <span style="color:#f92672">=</span> ConnectionPool<span style="color:#f92672">.</span><span style="color:#a6e22e">getConnection</span><span style="color:#f92672">();</span><span style="color:#75715e">//获取一个数据库连接
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">//使用该数据库连接访问数据库
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">//数据库返回结果，访问完成
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">//做其它耗时操作,但这些耗时操作数据库访问无关，
+</span><span style="color:#75715e"></span>   conn<span style="color:#f92672">.</span><span style="color:#a6e22e">close</span><span style="color:#f92672">();</span> <span style="color:#75715e">//释放连接回池
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><ul>
+<li>设计不合理导致资源占用时间过久， 如SQL语句设计不恰当， 或者没有索引导致的数据库访问太慢等。</li>
+<li>资源用完后， 在某种异常情况下， 没有关闭或者回池， 导致可用资源泄漏或者减少， 从而导致资源竞争。</li>
+</ul>
+<h2 id="定位系统假死原因">定位系统假死原因</h2>
+<p>导致系统挂死的原因有很多， 其中有一个最常见的原因是线程挂死。每次打印线程堆栈， 该线程必然都在同一个调用上下文上， 因此定位该类型的问题原理是，通过打印多次堆栈， 找出对应业务逻辑使用的线程， 通过对比前后打印的堆栈确认该线程执行的代码段是否一直没有执行完成。 通过打印多次堆栈， 找到挂起的线程（ 即不退出）。
+导致线程无法退出的原因可能有：</p>
+<ul>
+<li>线程正在执行死循环的代码</li>
+<li>资源不足或者资源泄漏， 造成当前线程阻塞在锁对象上（ 即wait在锁对象上）， 长期得不到唤醒(notify)。</li>
+<li>如果当前程序和外部通信， 当外部程序挂起无返回时， 也会导致当前线程挂起。</li>
+</ul>
+<h1 id="性能优化的理念">性能优化的理念</h1>
+<p>粗略地划分，代码可分为 cpu consuming 和 io consuming 两种类型，即耗 CPU 的和耗 IO 的代码。如果当前CPU已经能够接近100%的利用率， 并且代码业务逻辑无法再简化， 那么说明该系统的已经达到了性能最大化， 如果再想提高性能， 只能增加处理器(增加更多的机器或者安装更多的CPU)。
+而耗 IO 的代码，一般体现为<strong>请求某种资源</strong>，这可以是访问数据库，或者访问网络对端。</p>
+<p>评价程序写得好不好，要看随着访问压力的上升，CPU 使用率的变化，好的代码，随着访问压力的上升，CPU 的使用率最终能趋近100%，而坏的代码，使用率始终无法趋近 100%，有可能在 70% 就已经上不去了。好的代码应该在代码本身效率足够高的情况下，通过使用并发等手段，让 CPU 的尽量地忙起来。随着访问压力的上升，CPU 使用率也上升，并且 CPU 所跑的代码都是已经无法再进行逻辑优化或者效率提升的代码，这是最理想的状态。</p>
+<h1 id="常见性能瓶颈">常见性能瓶颈</h1>
+<h2 id="多余的同步">多余的同步</h2>
+<p>不相关的两个函数， 共用了一个锁,或者不同的共享变量共用了同一个锁， 无谓地制造出了资源争用，如下代码所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyClass</span> <span style="color:#f92672">{</span>
+  Object sharedObj<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun2</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun3</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun4</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun5</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>上面的代码将sychronized加在类的每一个方法上面， 违背了保护什么锁什么的原则。对于无共享资源的两个方法， 使用了同一个锁， 人为造成了不必要的锁等待。 上述的代码可作如下修改：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyClass</span> <span style="color:#f92672">{</span>
+  Object sharedObj<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun2</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun3</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun4</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun5</span><span style="color:#f92672">()</span> <span style="color:#f92672">{...}</span> <span style="color:#75715e">//不访问共享变量sharedObj
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><h2 id="锁粒度过大">锁粒度过大</h2>
+<p>对共享资源访问完成后， 没有将后续的代码放在synchronized同步代码块之外。 这样会导致当前线程长时间无谓的占有该锁， 其它争用该锁的线程只能等待， 最终导致性能受到极大影响。如下代码所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">synchronized</span><span style="color:#f92672">(</span>lock<span style="color:#f92672">){</span>
+    <span style="color:#f92672">...</span> <span style="color:#f92672">...</span> <span style="color:#75715e">//正在访问共享资源
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">...</span> <span style="color:#f92672">...</span> <span style="color:#75715e">//做其它耗时操作,但这些耗时操作与共享资源无关
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>上面的代码， 会导致一个线程过长地占有锁， 而在这么长的时间里其它线程只能等待。应将上述代码作如下修改，在多 CPU 的环境中，可获得性能的提升：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">synchronized</span><span style="color:#f92672">(</span>lock<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">...</span> <span style="color:#f92672">...</span> <span style="color:#75715e">//正在访问共享资源
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
+  <span style="color:#f92672">...</span> <span style="color:#f92672">...</span> <span style="color:#75715e">//其它耗时操作代码拿到synchronized代码外面
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><h2 id="字符串连接的滥用">字符串连接的滥用</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">String c <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> String<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;abc&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> String<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;efg&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> String<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;12345&#34;</span><span style="color:#f92672">);</span>
+</code></pre></div><p>每一次+操作都会产生一个临时对象， 并伴随着数据拷贝， 这个对性能是一个极大的消耗。 这个写法常常成为系统的瓶颈， 如果这个地方恰好是一个性能瓶颈， 修改成StringBuffer之后， 性能会有大幅的提升。</p>
+<h2 id="不恰当的线程模型">不恰当的线程模型</h2>
+<p>在多线程场合下， 如果线程模型不恰当， 也会使性能低下，在网络IO的场合， 使用消息发送队列和消息接收队列来进行异步IO，性能会有显著的提升。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/java-trouble-shooting/1.jpg" alt="消息接收" class="lazyload"><figcaption class="image-caption">消息接收</figcaption></figure>
+<figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/java-trouble-shooting/2.jpg" alt="消息发送" class="lazyload"><figcaption class="image-caption">消息发送</figcaption></figure></p>
+<h2 id="不恰当的-gc-参数">不恰当的 GC 参数</h2>
+<p>不恰当的GC参数设置会导致严重的性能问题，比如堆内存设置过小导致大量的 CPU 时间片被用来做垃圾回收</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>1453</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fjava-trouble-shooting%2f&amp;appkey=&amp;title=Java%20Trouble%20Shooting" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/logback-usage/" class="prev" rel="prev" title="Logback 使用详解"><i class="iconfont icon-dajiantou"></i>&nbsp;Logback 使用详解</a>
+         
+        
+        <a href="/2017/druid-sql-parser/" class="next" rel="next" title="Druid SQL 解析器">Druid SQL 解析器&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-06-06 18:33:55 \u002b0800 CST',
+              title: 'Java Trouble Shooting',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

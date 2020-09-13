@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2015/jedis-sharded-explain/" />
+  <link rel="next" href="/2016/java-lifecycle/" />
+  <link rel="canonical" href="/2015/linux-rpm/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           走进 Linux Rpm | beanlam
+       
+  </title>
+  <meta name="title" content="走进 Linux Rpm | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="走进 Linux Rpm"/>
+<meta name="twitter:description" content="包管理简介 什么是包(Packages)，为什么要管理它们 要回答这个问题，我们需要回到三个最基本的问题上面来：
+ 计算机 数据 程序  计算机需要获取数据和程序来做它应当做的事情，把数据和程序交给计算机，意味着把它们放进计算机的大容量存储里，现在，这又意味着放进硬盘里。数据和程序将会在硬盘里以文件的形式被存储。
+而数据，数据不仅需要空间去存储它，更重要的是，它需要以程序能处理的格式存储。
+最后，谈一谈程序，程序和数据一样，也需要一定的存储空间，但对于程序来说，以下几点更为重要：
+ 程序可能需要数据才能运行，这些数据必须格式正确、命名规范，并且存储在硬盘中某个合适的位置以便程序能够访问它。 程序可能需要配置文件，这些配置文件能够控制程序的行为，使程序表现出定制化的行为。 程序在硬盘上也需要工作空间，其次，程序也像数据一样，需要有一个合适的命名，并且存放在硬盘中合适的位置。 程序也有可能需要依赖其他的程序。 尽管一个程序的正常运行并不需要文档参与，但带有说明文档的程序，能以人类容易阅读的方式让使用者了解程序的使用方法。  现在想一想，当我们需要在电脑上安装软件时，我们可能采取的方式可能有以下两种：
+  阅读程序的文档，把程序，配置文件，以及数据拷贝到你的电脑上，确保它们的命名规范，并且放在了硬盘上的合适位置，而且，硬盘有足够的空间来放下这些东西。接下来，按你的意愿修改一下配置文件，最后，运行程序。
+  让电脑为你做这些事。
+  如果你觉得第一种方式还OK啊，可以接受。但是你有没有想过你需要同时追踪多少个文件，在Linux系统中，一个程序有超过两万个文件是很正常的事情，有大量的文档需要你去阅读，大量的文件需要拷贝，还有配置。而且，当你想要更新软件版本的时候，你要怎么办？凡此种种，不一而足。
+有些人会觉得第二种方式最简单啦：让电脑为你做这些事。RPM的出现，就是为了满足这些人的期待！
+走进“包(Packages)” 计算机能像赶鸭子一样，很好地管理2万个以上的文件，这也是包管理软件擅长做的。不过，说了这么久，到底什么是包？
+计算机眼中的包和我们日常生活中见到的包，其实是相似的，它们都能够把一些相关的东西放在同一个地方。在它们被使用前，它们都需要先被“打开”，在包上可以贴一个标签，以说明它里面装的是什么东西。
+一般，包管理系统会把各种不同的文件，包括程序，数据，文档和配置信息，全部打包在一个特定格式的文件里，这个文件就叫一个包文件。以RPM为例，这个包文件叫做“package”，“.rpm文件”,或者直接就叫“RPM”，名字不同，但其实代表的是一样东西。一个包，包含了RPM安装所需要的所有东西。
+一个rpm包通常包含下面这些类型的软件：
+ 一系列只有单个任务的程序集合，通常也叫作“应用(Application)”，比如说字符处理程序，或者是一门编程语言。 操作系统的一个特定部分，例如，操作系统启动时的初始化脚本，或一个特别的命令行SHELL，或者是一个支持web服务器的软件。  使用包的好处 使用包的一个最明显的好处是包是作为一个整体被管理的，如果需要移动该包，只需要移动整个包，而不用担心会漏掉某些文件，尽管这是一个最明显的好处，但是却不是最大的好处。
+使用包的最大的好处是，包本身携带了它应该如何被安装的信息。不仅可以携带安装的步骤信息，也可以携带卸载所需要的步骤信息。
+管理你的包吧，不然你会被它管理。 尽管包的使用已经降低了软件安装的复杂度，但它还是做不到不用你任何的参与就能做到安装，卸载。跟踪哪些包已经安装在你的系统上了，这是件很必要的事情，特别是当你所要安装的包依赖于其他包时。
+包的管理也需要你动手 你会发现，你对包的管理很可能就是在做以下这些事：
+ 安装新的包。 更新包。 卸载包。  你需要总是做这些事情，也会很容易就无法对包的信息进行跟踪和掌握。你应该知道些什么有关于包的信息呢？
+跟踪并管理包  很显然，你一定十分渴望看看在自己的操作系统上有哪些包已经安装了。 如果能获得你指定的某个包的信息，那就更好了。这些信息包括了从包开始安装的时间开始到一大串文件被安装结束。 能够通过多种方式获得包的信息也是激动人心的，技能找出一个包安装了什么文件，也能找出哪些包安装了某个特定的文件。 也应该能够查看一个包现在的安装方式和它之前的安装方式有何不同，误删文件是一件很平常的事，如果包管理器能够告诉你缺失了哪些文件，那么就能让你的软件正常运作起来。 配置文件包含的信息也让人很头疼，如果能够多注意这些配置文件，保证配置的改变不会丢失，那么，生活就会更愉悦了。  包管理，应该怎么做？ 前文为你描述了一个美好的愿景：包管理，能够让你更容易安装、更新和删除包；以多种方式查看包的信息；确保正确安装了包；甚至追踪配置文件的改动。但是，你要怎么做到这些呢？
+前文也已经提过，最好的方式去做这些事就是让你的电脑帮你做。很多公司和组织已经开发了包管理系统。包管理系统主要有两种实现方式：
+ 一些包管理系统关注的是使用包的步骤。 另外一些包管理系统关注的是包所涉及的文件，并对这些文件进行修改追踪。  这两种实现方式有各自的优势，但也有各自的缺点。第一种方式，能更容易地安装新的包，但是删除旧包很困难，而且，几乎不可能得到任何关于已安装包的有意义的信息。
+第二种方式得到已安装包的有用信息很容易，安装和删除包也比较容易。但这方式一个最不好的地方在于它无法在安装或删除包时执行一些特别的命令。
+而实际上，没有一个包管理系统使用单独一种方式来实现，都是两种方式的组合实现，
+RPM的设计目标 RPM的设计目标可以用一句话来概括:&ldquo;something for everyone&rdquo;，尽管RPM存在的主要原因是Red Hat公司为了更方便地在它们的linux发行版中安装几百个包，但这并不是RPM存在的唯一理由。我们可以看看Red Hat公司在设计RPM时的需求:"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "走进 Linux Rpm",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2015\/linux-rpm\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  952 ,
+  "url": "\/2015\/linux-rpm\/",
+  "datePublished": "2015-08-03T19:29:46\u002b08:00",
+  "dateModified": "2015-08-03T19:29:46\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">走进 Linux Rpm</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2015-08-03 >3 August 2015</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/rpm/"> rpm </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                5 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="包管理简介">包管理简介</h1>
+<h2 id="什么是包packages为什么要管理它们">什么是包(Packages)，为什么要管理它们</h2>
+<p>要回答这个问题，我们需要回到三个最基本的问题上面来：</p>
+<ul>
+<li>计算机</li>
+<li>数据</li>
+<li>程序</li>
+</ul>
+<p>计算机需要获取数据和程序来做它应当做的事情，把数据和程序交给计算机，意味着把它们放进计算机的大容量存储里，现在，这又意味着放进硬盘里。数据和程序将会在硬盘里以文件的形式被存储。</p>
+<p>而数据，数据不仅需要空间去存储它，更重要的是，它需要以程序能处理的格式存储。</p>
+<p>最后，谈一谈程序，程序和数据一样，也需要一定的存储空间，但对于程序来说，以下几点更为重要：</p>
+<ul>
+<li>程序可能需要数据才能运行，这些数据必须格式正确、命名规范，并且存储在硬盘中某个合适的位置以便程序能够访问它。</li>
+<li>程序可能需要配置文件，这些配置文件能够控制程序的行为，使程序表现出定制化的行为。</li>
+<li>程序在硬盘上也需要工作空间，其次，程序也像数据一样，需要有一个合适的命名，并且存放在硬盘中合适的位置。</li>
+<li>程序也有可能需要依赖其他的程序。</li>
+<li>尽管一个程序的正常运行并不需要文档参与，但带有说明文档的程序，能以人类容易阅读的方式让使用者了解程序的使用方法。</li>
+</ul>
+<p>现在想一想，当我们需要在电脑上安装软件时，我们可能采取的方式可能有以下两种：</p>
+<ol>
+<li>
+<p>阅读程序的文档，把程序，配置文件，以及数据拷贝到你的电脑上，确保它们的命名规范，并且放在了硬盘上的合适位置，而且，硬盘有足够的空间来放下这些东西。接下来，按你的意愿修改一下配置文件，最后，运行程序。</p>
+</li>
+<li>
+<p>让电脑为你做这些事。</p>
+</li>
+</ol>
+<p>如果你觉得第一种方式还OK啊，可以接受。但是你有没有想过你需要同时追踪多少个文件，在Linux系统中，一个程序有超过两万个文件是很正常的事情，有大量的文档需要你去阅读，大量的文件需要拷贝，还有配置。而且，当你想要更新软件版本的时候，你要怎么办？凡此种种，不一而足。</p>
+<p>有些人会觉得第二种方式最简单啦：让电脑为你做这些事。RPM的出现，就是为了满足这些人的期待！</p>
+<h2 id="走进包packages">走进“包(Packages)”</h2>
+<p>计算机能像赶鸭子一样，很好地管理2万个以上的文件，这也是包管理软件擅长做的。不过，说了这么久，到底什么是包？</p>
+<p>计算机眼中的包和我们日常生活中见到的包，其实是相似的，它们都能够把一些相关的东西放在同一个地方。在它们被使用前，它们都需要先被“打开”，在包上可以贴一个标签，以说明它里面装的是什么东西。</p>
+<p>一般，包管理系统会把各种不同的文件，包括程序，数据，文档和配置信息，全部打包在一个特定格式的文件里，这个文件就叫一个包文件。以RPM为例，这个包文件叫做“package”，“.rpm文件”,或者直接就叫“RPM”，名字不同，但其实代表的是一样东西。一个包，包含了RPM安装所需要的所有东西。</p>
+<p>一个rpm包通常包含下面这些类型的软件：</p>
+<ul>
+<li>一系列只有单个任务的程序集合，通常也叫作“应用(Application)”，比如说字符处理程序，或者是一门编程语言。</li>
+<li>操作系统的一个特定部分，例如，操作系统启动时的初始化脚本，或一个特别的命令行SHELL，或者是一个支持web服务器的软件。</li>
+</ul>
+<h3 id="使用包的好处">使用包的好处</h3>
+<p>使用包的一个最明显的好处是包是作为一个整体被管理的，如果需要移动该包，只需要移动整个包，而不用担心会漏掉某些文件，尽管这是一个最明显的好处，但是却不是最大的好处。</p>
+<p>使用包的最大的好处是，包本身携带了它应该如何被安装的信息。不仅可以携带安装的步骤信息，也可以携带卸载所需要的步骤信息。</p>
+<h2 id="管理你的包吧不然你会被它管理">管理你的包吧，不然你会被它管理。</h2>
+<p>尽管包的使用已经降低了软件安装的复杂度，但它还是做不到不用你任何的参与就能做到安装，卸载。跟踪哪些包已经安装在你的系统上了，这是件很必要的事情，特别是当你所要安装的包依赖于其他包时。</p>
+<h3 id="包的管理也需要你动手">包的管理也需要你动手</h3>
+<p>你会发现，你对包的管理很可能就是在做以下这些事：</p>
+<ul>
+<li>安装新的包。</li>
+<li>更新包。</li>
+<li>卸载包。</li>
+</ul>
+<p>你需要总是做这些事情，也会很容易就无法对包的信息进行跟踪和掌握。你应该知道些什么有关于包的信息呢？</p>
+<h3 id="跟踪并管理包">跟踪并管理包</h3>
+<ul>
+<li>很显然，你一定十分渴望看看在自己的操作系统上有哪些包已经安装了。</li>
+<li>如果能获得你指定的某个包的信息，那就更好了。这些信息包括了从包开始安装的时间开始到一大串文件被安装结束。</li>
+<li>能够通过多种方式获得包的信息也是激动人心的，技能找出一个包安装了什么文件，也能找出哪些包安装了某个特定的文件。</li>
+<li>也应该能够查看一个包现在的安装方式和它之前的安装方式有何不同，误删文件是一件很平常的事，如果包管理器能够告诉你缺失了哪些文件，那么就能让你的软件正常运作起来。</li>
+<li>配置文件包含的信息也让人很头疼，如果能够多注意这些配置文件，保证配置的改变不会丢失，那么，生活就会更愉悦了。</li>
+</ul>
+<h2 id="包管理应该怎么做">包管理，应该怎么做？</h2>
+<p>前文为你描述了一个美好的愿景：包管理，能够让你更容易安装、更新和删除包；以多种方式查看包的信息；确保正确安装了包；甚至追踪配置文件的改动。但是，你要怎么做到这些呢？</p>
+<p>前文也已经提过，最好的方式去做这些事就是让你的电脑帮你做。很多公司和组织已经开发了包管理系统。包管理系统主要有两种实现方式：</p>
+<ol>
+<li>一些包管理系统关注的是使用包的步骤。</li>
+<li>另外一些包管理系统关注的是包所涉及的文件，并对这些文件进行修改追踪。</li>
+</ol>
+<p>这两种实现方式有各自的优势，但也有各自的缺点。第一种方式，能更容易地安装新的包，但是删除旧包很困难，而且，几乎不可能得到任何关于已安装包的有意义的信息。</p>
+<p>第二种方式得到已安装包的有用信息很容易，安装和删除包也比较容易。但这方式一个最不好的地方在于它无法在安装或删除包时执行一些特别的命令。</p>
+<p>而实际上，没有一个包管理系统使用单独一种方式来实现，都是两种方式的组合实现，</p>
+<h2 id="rpm的设计目标">RPM的设计目标</h2>
+<p>RPM的设计目标可以用一句话来概括:&ldquo;something for everyone&rdquo;，尽管RPM存在的主要原因是Red Hat公司为了更方便地在它们的linux发行版中安装几百个包，但这并不是RPM存在的唯一理由。我们可以看看Red Hat公司在设计RPM时的需求:</p>
+<h3 id="使用安装和卸载更容易">使用安装和卸载更容易</h3>
+<p>正如我们在前文中可以看到的那样，安装一个包需要很多复杂的步骤。如果把这些事情交给人类来做，失败率是很高的。因此RPM的目的就是要帮助人们更简单地安装包，卸载包。</p>
+<p>另一方面，RPM又需要给包的创建者足够的控制权让他们来控制这个包应该怎样安装。原因很简单：只要包的创建者多下一些功夫，那么这些包就能很好的安装和卸载。</p>
+<h3 id="使检验一个包是否正确安装更容易">使检验一个包是否正确安装更容易。</h3>
+<p>软件就像生活一样，总有许多意想不到的问题，RPM应该能够捕获到这些问题，比如说文件缺失或者文件非法修改。</p>
+<h3 id="使包的创建者创建包的时候更容易">使包的创建者创建包的时候更容易</h3>
+<p>节约了包创建者的很多时间和精力。</p>
+<h3 id="使包从源代码开始构建">使包从源代码开始构建。</h3>
+<p>站在包创建者的角度上看，使RPM从源代码开始工作十分重要。为什么呢？</p>
+<p>使用源代码，可以让他们把为了修改bug、添加新功能等等而添加的修改与之前的修改区分开来，这对于包构建者来说是一件好事，因为他们很多人不是软件的源作者。</p>
+<p>把修改区分开，这样即使在几个月以后，依然能够明确地知道对包有过哪些改动</p>
+<h3 id="使其平台独立">使其平台独立</h3>
+<p>包创建者需要做的一件繁杂的事就是使程序能够在不同类型的电脑上运行，RPM能够得到程序的源代码，加上一些必要的修改使其能够被正确构建，这是非常方便的。</p>
+<h2 id="包里面有什么东西">包里面有什么东西</h2>
+<h3 id="包名片">包名片</h3>
+<p>每个RPM包都有一些信息，用来作为自身的唯一标识。我们把这些信息叫做一个包名片，下面是两个包名片的样本例子：</p>
+<ul>
+<li>nls-1.0-1</li>
+<li>perl-5.001m-4</li>
+</ul>
+<p>尽管这些名片看起来似乎是十分不同的，但是他们都遵循RPM包的包名片命名规则。每个包名片由以下三部分按顺序组成：</p>
+<h4 id="组成部分1软件的名字">组成部分1：软件的名字</h4>
+<p>每个包名片以软件的名字开始，例如上例中，分别为nls和perl。</p>
+<h4 id="组成部分2软件的版本">组成部分2：软件的版本</h4>
+<p>例如上例中，版本号分别为1.0和5.001m。</p>
+<h4 id="组成部分3包的发布号">组成部分3：包的发布号</h4>
+<p>包的发布号反映出包在同一个版本号下重新构建的次数，重新的构建的原因可能是因为修复了一个Bug。习惯上，发布号从1开始。上例中的发布号分别为1和4。</p>
+<h3 id="与包有关的信息">与包有关的信息</h3>
+<ul>
+<li>包被创建的日期和时间。</li>
+<li>对包的内容的说明。</li>
+<li>包所需要安装的文件的总数。</li>
+<li>分组的信息。</li>
+<li>签名信息。</li>
+</ul>
+<h3 id="包中的文件信息">包中的文件信息</h3>
+<ul>
+<li>每个文件的名字以及它将要安装到哪个目录。</li>
+<li>每个文件的权限。</li>
+<li>文件的所有者以及所属的用户组</li>
+<li>每个文件的MD5校验码</li>
+<li>文件的内容</li>
+</ul>
+<h1 id="安装软件">安装软件</h1>
+<h2 id="rpm--i-它做了什么">rpm -i 它做了什么</h2>
+<p>一说到rpm，人们第一时间想到的就是rpm能用来安装软件。正如我们前面提及到的，安装软件时一个复杂的，经常出错的事情，但在rpm眼中，安装软件只不过是一个命令的事。</p>
+<p><strong>rpm -i (等同于rpm &ndash;install)</strong> 命令能够安装已经被打包成rpm格式的软件，它主要做以下几件事：</p>
+<ul>
+<li>依赖检查.</li>
+<li>检测冲突</li>
+<li>做一些正式安装前必须做的准备工作</li>
+<li>根据配置文件确定如何安装软件</li>
+<li>解压包并把它们放在一个合适的路径下</li>
+<li>执行一些在安装后须要做的工作</li>
+<li>对它自身的所作所为进行跟踪</li>
+</ul>
+<p>下面将逐个解释上述所述的几点：</p>
+<h3 id="依赖检查">依赖检查</h3>
+<p>有时候，一些安装包须要在它所依赖的安装包安装好了之后才能正常安装。RPM将会确认所需安装软件的依赖包已经安装好了，它也会保证安装软件包时不影响其它已经安装好的软件。</p>
+<h3 id="检测冲突">检测冲突</h3>
+<p>RPM在这个阶段将会进行一系列检测，如果试图安装一个已经安装过的软件，或者用旧版本覆盖新版本的软件，或者是非法改写某个已安装软件的软件。这些RPM都能检测出来并及时制止。</p>
+<h3 id="做一些正式安装前必须做的准备工作">做一些正式安装前必须做的准备工作</h3>
+<p>一些命令必须在正式软件安装开始之前优先执行，RPM将会执行你所定义的这些命令，这样能够避免在安装时遇到很多问题。</p>
+<h3 id="根据配置文件确定如何安装软件">根据配置文件确定如何安装软件</h3>
+<p>RPM与其他包管理软件不同的一点是，它会使用配置文件，尽管有时候改变配置文件只是为了个性化地安装软件，但这会激怒你的小伙伴，因为他们之前所做的一些个性化配置全都没了。而RPM会分析配置文件，并尝试去做正确的事，即使这些软件一开始并不是使用RPM安装的。</p>
+<h3 id="解压包并把它们放在一个合适的路径下">解压包并把它们放在一个合适的路径下</h3>
+<p>每个安装包都会包含许多待安装的文件，并且包含了每个文件需要被安装到哪个目录下，而且，文件的其他一些属性，例如权限和所有者，RPM都会进行正确的设置。</p>
+<h3 id="执行一些在安装后须要做的工作">执行一些在安装后须要做的工作</h3>
+<p>有时候，需要在软件安装后执行一些命令。比如说，执行ldconfig命令来使一些库变成公用的。</p>
+<h3 id="对它自身的所作所为进行跟踪">对它自身的所作所为进行跟踪</h3>
+<p>每当RPM把软件安装到你的系统上后，它会在数据库中保留对文件的跟踪，数据库中存储了大量有用的信息，例如，当RPM检测冲突时，它就会使用到它存储在数据库中的信息。</p>
+<h2 id="rpm安装实战">RPM安装实战</h2>
+<p>让我们来看看一个例子，安装一个软件，你只需要使用命令<code>rpm -i</code>，命令后跟着rpm包文件就可以：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># rpm -i eject-1.2-2.i386.rpm</span>
+</code></pre></div><p>这时候，上文中所提到的几件事情在这个时候已经完成了。这个软件包已经被安装好了，需要注意的是，这里的安装包文件并不需要严格遵守rpm包的命名规范，例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># mv eject-1.2-2.i386.rpm baz.txt</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># rpm -i baz.txt</span>
+</code></pre></div><p>在这个例子中，我们把rpm包的名字从eject-1.2-2.i386.rpm改为了baz.txt，安装结果将会和之前的安装结果的一样。rpm包的名字在RPM进行安装时，将不会被使用。RPM用的是包里的文件的内容，无论名字怎么改，RPM始终都能读取包里的文件来实现正确安装。</p>
+<h3 id="使用url来指定包文件">使用URL来指定包文件</h3>
+<p>如果你上网，你一定会注意到一个网页是这样被标识的：</p>
+<blockquote>
+<p><a href="http://www.redhat.com/support/docs/rpm/RPM-HOWTO/RPM-HOWTO.html">http://www.redhat.com/support/docs/rpm/RPM-HOWTO/RPM-HOWTO.html</a></p>
+</blockquote>
+<p>这叫做一个统一资源定位符(Uniform Resource Locator),或者叫URL，RPM也可以使用URL来安装软件，尽管URL看起来有些不一样，下面有另外一个例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># ftp://ftp.redhat.com/pub/redhat/code/rpm/rpm-2.3-1.i386.rpm</span>
+</code></pre></div><p>ftp标识着这个URL是基于文件传输协议的，正如名字所暗示的那样，这个类型的URL是用来传输文件的。</p>
+<p>RPM对URL的支持使我们能够通过一个简单的命令来安装软件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># rpm -i ftp://ftp.gnomovision.com/pub/rpms/foobar-1.0-1.i386.rpm</span>
+</code></pre></div><h3 id="也许你会看到你从未见过的警告信息">也许你会看到你从未见过的警告信息</h3>
+<p>依环境而定，当你在安装一个普通软件的时候，以下信息你可以从来没有见到过或者是经常见到过：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># rpm -i cdp-0.33-100.i386.rpm</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">warning: /etc/cdp-config saved as /etc/cdp-config.rpmorig
+</code></pre></div><p>这是什么意思，这要从RPM处理配置文件说起，在上面的例子中，RPM找到了一个文件(/etc/cdp-config)，这个文件不属于任何已经安装了的包，由于cdp-0.33-100包含了一个与该文件同名的包，并且该文件要安装在同一个目录下，就会遇到上面这个警告信息。</p>
+<p>RPM将会有两个步骤来处理这个问题：</p>
+<ol>
+<li>把原来的文件改名为cdp-config.rpmorig.</li>
+<li>使用安装包中的cdp-config来安装软件。</li>
+</ol>
+<p>接下来我们查看这个目录，我们会看到一切如我们所说的那样发生了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># ls -al /etc/cdp*</span>
+-rw-r--r--   <span style="color:#ae81ff">1</span> root     root      <span style="color:#ae81ff">119</span> Jun <span style="color:#ae81ff">23</span> 16:00 /etc/cdp-config
+-rw-rw-r--   <span style="color:#ae81ff">1</span> root     root       <span style="color:#ae81ff">56</span> Jun <span style="color:#ae81ff">14</span> 21:44 /etc/cdp-config.rpmorig
+</code></pre></div><h2 id="两个有用的选项">两个有用的选项</h2>
+<p>有两个选项，能够帮助rpm -i 工作得更好，也很有用。你也许会意味它们是RPM的默认行为，但实际上不是，只不过要使用它们，你得多打一些字：</p>
+<h3 id="使用--v-选项得到更多的反馈">使用 -v 选项得到更多的反馈</h3>
+<p>尽管rpm -i 已经做了很多事情，但是还不够，不是吗？ 当进行安装的时候，rpm表现得太安静了，除非安装过程中出了错。不过我们可以通过加上 -v 选项来让它输出更多的信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -iv eject-1.2-2.i386.rpm</span>
+    Installing eject-1.2-2.i386.rpm
+</code></pre></div><p>使用 -v 好处是很多的，特别是当你需要用一行命令来安装多个软件的时候：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -iv *.rpm</span>
+    Installing eject-1.2-2.i386.rpm
+    Installing iBCS-1.2-3.i386.rpm
+    Installing logrotate-1.0-1.i386.rpm
+</code></pre></div><h3 id="无耐心者的福音--h">无耐心者的福音 -h</h3>
+<p>有时候一个安装包可能非常大，除了呆呆地看着硬盘的灯在闪，你找不到其他方式知道RPM的工作进度，还要多久才能安装完。加上-h选项，RPM会打印出**#**来显示进度，50个**#**的出现意味着安装完成。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -ih eject-1.2-2.i386.rpm</span>
+    <span style="color:#75715e">##################################################</span>
+</code></pre></div><p>一旦50个**#**出先了，那么就代表软件已经完成，这一点在你安装多个软件时也很有用：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -ivh *.rpm</span>
+    eject          <span style="color:#75715e">##################################################</span>
+    iBCS           <span style="color:#75715e">##################################################</span>
+    logrotate      <span style="color:#75715e">##################################################</span>
+</code></pre></div><h2 id="更多rpm--i-的选项">更多rpm -i 的选项</h2>
+<ul>
+<li>-vv：得到更多的信息</li>
+<li>&ndash;test：只进行安装测试</li>
+<li>&ndash;replacepkgs：覆盖安装</li>
+<li>&ndash;replacefiles：即使覆盖了其他软件的文件，也照常安装</li>
+<li>&ndash;nodeps：安装前不做依赖检查</li>
+<li>&ndash;force：无论怎样，都给老子安装</li>
+<li>&ndash;excludedocs：不安装文档</li>
+<li>&ndash;includedocs：安装文档</li>
+<li>&ndash;prefix <!-- raw HTML omitted -->：重定向安装包路径为<!-- raw HTML omitted --></li>
+<li>&ndash;noscripts：不执行安装前后的脚本命令</li>
+<li>&ndash;percent：显示安装进度的百分比</li>
+<li>&ndash;rcfile <!-- raw HTML omitted -->：使用<!-- raw HTML omitted -->作为备选的rcfile</li>
+<li>&ndash;root<!-- raw HTML omitted -->：使用<!-- raw HTML omitted -->作为备选的root</li>
+<li>&ndash;dbpath <!-- raw HTML omitted -->：使用<!-- raw HTML omitted -->来访问数据库</li>
+<li>&ndash;ftpport <!-- raw HTML omitted -->：使用<!-- raw HTML omitted -->所指定的端口来执行基于FTP协议的安装</li>
+<li>&ndash;ftpproxy <!-- raw HTML omitted -->：使用<!-- raw HTML omitted -->所指定的地址作为FTP代理</li>
+<li>&ndash;ignorearch：不校验安装包的格式</li>
+<li>&ndash;ignoreos：不检查安装包的操作系统信息</li>
+</ul>
+<h1 id="卸载软件">卸载软件</h1>
+<h2 id="rpm--e-做了什么">rpm -e 做了什么</h2>
+<p>rpm -e(等同于 rpm &ndash;erase)这个命令能够卸载或擦除一个或多个安装包，当RPM卸载一个RPM包时，做了以下几件事：</p>
+<ul>
+<li>确保数据库中没有其它包引用了要卸载的包。</li>
+<li>执行卸载前的脚本(如果有的话)</li>
+<li>检查配置文件是否已经被修改过，如果是，则保留它们的一个备份。</li>
+<li>查询数据库，找到这个包安装的所有文件，如果该些文件不属于别的包，则将它们删除。</li>
+<li>执行卸载后的脚本(如果有的话)</li>
+<li>从数据库中删除包的所有追踪信息。</li>
+</ul>
+<h2 id="卸载一个包">卸载一个包</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -e eject</span>
+</code></pre></div><p>这样，eject包就被无声无息地卸载了，显然我们会想要得到更多的反馈信息，加上-v选项试试：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -ev eject</span>
+</code></pre></div><p>依然是没有任何东西输出，但是还有一个选项我们可以用。见下文。</p>
+<h3 id="使用-vv得到更多反馈信息">使用-vv得到更多反馈信息</h3>
+<p>通过加上-vv选项，我们可以得到RPM卸载过程中的更多反馈信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -evv eject</span>
+    D: uninstalling record number <span style="color:#ae81ff">286040</span>
+    D: running preuninstall script <span style="color:#f92672">(</span><span style="color:#66d9ef">if</span> any<span style="color:#f92672">)</span>
+    D: removing files test <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+    D: /usr/man/man1/eject.1 - removing
+    D: /usr/bin/eject - removing
+    D: running postuninstall script <span style="color:#f92672">(</span><span style="color:#66d9ef">if</span> any<span style="color:#f92672">)</span>
+    D: removing database entry
+    D: removing name index
+    D: removing group index
+    D: removing file index <span style="color:#66d9ef">for</span> /usr/bin/eject
+    D: removing file index <span style="color:#66d9ef">for</span> /usr/man/man1/eject.1
+</code></pre></div><p>虽然-v无法告诉我们什么东西，但是-vv却告诉我们很多东西，不过，它究竟告诉了我们什么呢？</p>
+<p>首先，RPM打印出了软件包的记录号，这个记录号只对于那些写RPM数据库代码的人才有意义。</p>
+<p>接着，RPM执行卸载前脚本，如果有脚本的话。</p>
+<p>&ldquo;removes files test = 0&quot;这一行标识RPM将会卸载整个软件包，如果这个数字不为0的话，RPM只是进行了卸载环境的检测而已。当加上&ndash;test选项时，不为0的情况才会发生。</p>
+<p>接下来的两行显示出了卸载过程中删除的文件，如果一个包中包含了很多文件，那么使用-vv参数将会导致大量的输出。</p>
+<p>紧接着，RPM执行卸载后脚本，如果存在的话。这个脚本在所有文件删除后才执行。</p>
+<p>最后，最后5行显示出RPM删除了数据库中的跟踪信息。</p>
+<h2 id="其他选项">其他选项</h2>
+<ul>
+<li>&ndash;test：做卸载环境检测，但并不真正卸载软件。</li>
+<li>&ndash;nodeps：在卸载之前，不检查依赖关系</li>
+<li>&ndash;noscripts：不执行卸载前或卸载后的脚本</li>
+<li>&ndash;rcfile ：使用<!-- raw HTML omitted -->作为备选的rcfile</li>
+<li>&ndash;root：使用<!-- raw HTML omitted -->作为备选的root</li>
+<li>&ndash;dbpath ：使用<!-- raw HTML omitted -->来访问数据库</li>
+</ul>
+<h2 id="rpm--e-与配置文件">rpm -e 与配置文件</h2>
+<p>如果你修改了软件安装时的配置文件，那么即使你卸载了软件，配置信息依然不会丢失。例如，你修改了/etc/skel/.bashrc(一个配置文件)，这个配置文件是作为etcskel包的一部分被安装的。接下来，我们删除etcskel:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -e etcskel</span>
+</code></pre></div><p>我们去/etc/skel目录下看看：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># ls -al</span>
+    total <span style="color:#ae81ff">5</span>
+    drwxr-xr-x   <span style="color:#ae81ff">3</span> root     root         <span style="color:#ae81ff">1024</span> Jun <span style="color:#ae81ff">17</span> 22:01 .
+    drwxr-xr-x   <span style="color:#ae81ff">8</span> root     root         <span style="color:#ae81ff">2048</span> Jun <span style="color:#ae81ff">17</span> 19:01 ..
+    -rw-r--r--   <span style="color:#ae81ff">1</span> root     root          <span style="color:#ae81ff">152</span> Jun <span style="color:#ae81ff">17</span> 21:54 .bashrc.rpmsave
+    drwxr-xr-x   <span style="color:#ae81ff">2</span> root     root         <span style="color:#ae81ff">1024</span> May <span style="color:#ae81ff">13</span> 13:18 .xfm
+</code></pre></div><p>很显然，.bashrc.rpmsave这个文件就是你修改的配置的一个备份，然而你也应当要知道的是，这只是对配置文件RPM才会保留一个备份。</p>
+<h2 id="请注意">请注意</h2>
+<p>RPM卸载软件时几乎替你在操作系统上做了所有的事，这很棒。但是，这也意味着RPM在卸载你系统上的重要软件时，也一样铁面无私。例如：</p>
+<ul>
+<li>RPM: RPM能卸载它自己吗，答案当然是可以。</li>
+<li>Bash: 当心卸载掉了你机子上的Bash。</li>
+</ul>
+<p>大多数情况下，RPM的依赖检测能检测到你所需要卸载的软件与其他软件的依赖关系，这会提醒你不要误删了软件。如果你是在不确定有何依赖关系，可以使用rpm -q来查询你想要卸载的软件。</p>
+<h1 id="升级软件">升级软件</h1>
+<h2 id="rpm--u-做了什么">rpm -U 做了什么</h2>
+<p>如果RPM的命令中有一条命令好用到没朋友，那么这条命令就是RPM的软件升级命令了。毕竟，只有那些尝试过手动在linux中升级一个软件的版本的人才知道蛋蛋有多疼。有了RPM，软件升级只不过是一个命令的事：rpm -U(等同于rpm &ndash;upgrade)。这个命令执行了一下两个独立的操作：</p>
+<ol>
+<li>安装软件的升级版。</li>
+<li>卸载旧版本。</li>
+</ol>
+<p>如果你天真地说rpm -U不算什么，完全可以用rpm -i和rpm -e来替换，那么，我会告诉你，你真的说对了。
+也许有人会认为rpm -U只是一个鸡肋，因为它只是执行了其它命令的组合而已。事实上，rpm -U这样做自有它的机灵之处。rpm -U精心设计了安装和卸载命令的组合，使得即使升级不成功时，依然能够保护重要的文件不被删除。</p>
+<p>单独地使用安装和卸载的命令，并不能胜任软件升级的任务，安装意味着可能会覆盖一个修改过的配置文件，同样，卸载意味着可能会删除配置文件。而使用升级命令，即使你的电脑上安装了该软件的多个版本，也能顺利升级。</p>
+<h3 id="配置文件的魔法">配置文件的魔法</h3>
+<p>虽然rpm -i 和rpm -e各自都对配置文件的操作，但是，使用rpm -U才能真正保护好配置文件。当RPM在处理配置文件时，它至少考虑了六种可能发生的场景。</p>
+<p>为了做出正确的决定，RPM需要获得一些信息。这些信息是什么呢，它就是配置文件的<strong>3</strong>个MD5校验码，每次配置文件的更改都会产生一个不同的MD5校验码，MD5校验码不同，则说明两个配置的内容不同。</p>
+<p>我们特意提到是<strong>3</strong>个MD5校验码，那么这<strong>3</strong>个校验码分别是什么呢：</p>
+<ol>
+<li>软件安装时的<strong>原始配置文件</strong>的MD5校验码</li>
+<li>软件升级曾经升级过的<strong>当前配置文件</strong>的MD5校验码</li>
+<li>新的软件升级包中的<strong>新配置文件</strong>的MD5校验码</li>
+</ol>
+<p>上面三种不同的MD5校验码的组合，决定RPM在升级软件时的行为。下文中，将会使用X,Y,Z来代替MD5校验码。</p>
+<h4 id="原始配置文件x当前配置文件x新配置文件x">原始配置文件=X，当前配置文件=X，新配置文件=X</h4>
+<p>这种场景下，一开始安装的配置文件安装后就一直没有修改过，如果RPM安装了新的配置文件，将会覆盖旧的配置文件。有时候你也许会感到奇怪，我新安装的文件它的内容和名字我都没有修改过，为什么还要覆盖呢，这是因为新版本的文件的属性可能已经修改过了，比如文件的所有者。</p>
+<h4 id="原始配置文件x当前配置文件x新配置文件y">原始配置文件=X，当前配置文件=X，新配置文件=Y</h4>
+<p>原始配置并没有被修改过，但新的安装包中它的配置文件与当前配置文件却是不同的，这些改变可能是为了修改一个Bug，或者新添一个新功能。</p>
+<p>在这种情况下，RPM将会安装新的配置文件，并覆盖旧的配置文件。RPM并不会为原先的配置文件保留一个备份，因为在升级软件之前，它一直都没有改动过。</p>
+<h4 id="原始配置文件x当前配置文件y新配置文件x">原始配置文件=X，当前配置文件=Y，新配置文件=X</h4>
+<p>配置文件被修改过了，但是，新的安装包中的配置文件却和原始的配置文件是一样的。</p>
+<p>这种情况下，RPM会认为由于新的安装包中配置文件和原始配置文件的内容是一样的，而当前配置文件虽然已被修改过，但它认为这些修改对于新的版本来说依然是合法的。于是它不会去覆盖当前的配置文件。</p>
+<h4 id="原始配置文件x当前配置文件y新配置文件y">原始配置文件=X，当前配置文件=Y，新配置文件=Y</h4>
+<p>配置文件被修改过了，并且修改的恰恰与新的安装包中的配置文件中的修改是一样的。</p>
+<p>这种情况下，RPM将会安装新版本，并且覆盖当前配置文件，这和第一种情况的处理方式是一样的。尽管新的配置文件和当前配置文件相比，但是文件的其他属性可能修改了，因此安装新版本配置文件。</p>
+<h4 id="原始配置文件x当前配置文件y新配置文件z">原始配置文件=X，当前配置文件=Y，新配置文件=Z</h4>
+<p>在这里，原始配置文件已经被修改过了，并且新的配置文件和当前配置文件以及原始配置文件都是不同的。</p>
+<p>RPM是无法通过分析配置文件中的内容来决定如何操作的。不过在这种情况下，RPM会选择一种它认为最好的方式来处理，新配置文件肯定是能兼容新的安装包的，当前配置文件，则可能兼容新的安装包，也可能不兼容。因此RPM会安装新的配置文件。</p>
+<p>不过，当前配置文件由于被修改过，那一定是某个人有意为之的，有可能当前配置文件所做的修改对新版本的软件包依然适用，因此，RPM会保留当前配置文件的一个备份为<!-- raw HTML omitted -->.rpmsave，并且打印出一条警告信息。</p>
+<pre><code>    warning: /etc/skel/.bashrc saved as /etc/skel/.bashrc.rpmsave
+</code></pre><h4 id="原始配置文件none当前配置文件新配置文件">原始配置文件=none，当前配置文件=??，新配置文件=??</h4>
+<p>出现这种情况，是因为RPM在一开始安装软件的时候，并没有安装配置文件，因此没有MD5校验码。</p>
+<p>因为没有原始文件的MD5，所以RPM无法决定当前配置文件是否被修改过的。因此，RPM会把当前文件保存一个备份，命名为<!-- raw HTML omitted -->.rpmorig，然后打印一条警告信息，然后安装新的配置文件。</p>
+<p>正如你所看到的，大多数场景下，RPM会采取最合适的方式来做升级操作。不过，大多数情况下，已经修改过的配置文件是不值得备份的，通常都会被删掉。</p>
+<h2 id="升级软件包">升级软件包</h2>
+<p>使用rpm -U的方式如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -U eject-1.2-2.i386.rpm</span>
+</code></pre></div><h3 id="rpm--u-见不得人的小秘密">rpm -U 见不得人的小秘密</h3>
+<p>假设，我们用rpm -U升级一个软件，但实际上，这个软件从来没有安装过，既然没有安装过，谈何升级呢？这个时候，rpm -U就会变成rpm -i啦，相当于安装软件，而不是升级软件。</p>
+<p>既然rpm -U能够表现出rpm -i的行为，因此很多时候，人们直接用一个命令rpm -U来安装和升级软件。</p>
+<h2 id="它们只是几乎相同而已">它们只是几乎相同而已</h2>
+<p>rpm -U在特殊情况下可以代替rpm -i，因此rpm -i的绝大多数附加命令选项对于rpm -U也是适用的。下面是一些rpm -U独有的选项：</p>
+<ul>
+<li>
+<p>&ndash;oldpackage： 升级到旧版本</p>
+</li>
+<li>
+<p>&ndash;force: 无论发生什么事，给老子升级</p>
+</li>
+</ul>
+<h1 id="查询包信息">查询包信息</h1>
+<h2 id="rpm--q-做了什么">rpm -q 做了什么</h2>
+<p>如果你想要在你的系统上安装、卸载或升级软件，但却不知道在你的系统中已经有哪些软件了，这是不是一件很蛋疼的事？你可能会陷入下面这些场景中：</p>
+<ul>
+<li>
+<p>你在你的系统中遇到一个文件，你不认识它，它也不认识你，它到底是哪里来的，是哪个软件安装的。</p>
+</li>
+<li>
+<p>你的朋友发送一个软件安装包给你，但是你不知道这个软件是干什么的，它将会安装什么功能，它从哪里来。</p>
+</li>
+<li>
+<p>你记得你安装了一个软件，但是却忘了这个软件的版本，并且找不到关于这个软件的文档。</p>
+</li>
+</ul>
+<p>这些场景不胜枚举，但是你可以用rpm -q帮助你。</p>
+<h2 id="rpm查询">RPM查询</h2>
+<p>当你了解了如何查询软件的信息后，很容易你就能敲出一个查询命令来查询你想要知道的信息。-q是一个最基本的选项，查询可分为对包的查询以及对特定信息的查询，下面看看针对包的查询：</p>
+<h3 id="包查询">包查询</h3>
+<p>首先你要知道你要查询的是哪一个或那些包。</p>
+<h4 id="包名片-1">包名片</h4>
+<p>包名片是标识一个包的唯一字符串，每个名片包含了三种信息：</p>
+<ol>
+<li>安装包的名字</li>
+<li>安装包的版本</li>
+<li>安装包的发行号</li>
+</ol>
+<p>当使用一个包的名片来查询包的信息时，必须有包名，你也可以加上版本号和发行号。第一个限制是，包名片的三种信息的每一个都必须完全给出，如果要写上版本号，就须把版本号写全，如果要写上发行号，就须把发行号写全。如果只给出了三种信息的其中一个或两个，那么RPM在找包的时候就会省略右边的其它部分。第二个限制是，如果你指定了发行号，那么必须也要指定版本号。让我们以几个例子来说明：</p>
+<p>假设，你最近安装了一个新版本的C库，但是你不记得版本号了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -q libc</span>
+    libc-5.2.18-1
+</code></pre></div><p>这样的查询方式中，rpm会从已安装的软件中找到匹配你给出的信息的软件，并会把整个包名片都打印出来。在上面的例子中，假设系统也安装有版本为5.2.17的C库，那它也会显示出来。</p>
+<p>下面的例子中，我们将会把版本号也包括进去查询：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -q rpm-2.3</span>
+    rpm-2.3-1
+</code></pre></div><p>注意，RPM对包名是比较挑剔的，例如，下面这些查询就查不到C库：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -q LibC</span>
+    package LibC is not installed
+
+    <span style="color:#75715e"># rpm -q lib</span>
+    package lib is not installed
+
+    <span style="color:#75715e"># rpm -q &#34;lib*&#34;</span>
+    package lib* is not installed
+
+    <span style="color:#75715e"># rpm -q libc-5</span>
+    package libc-5 is not installed
+
+    <span style="color:#75715e"># rpm -q libc-5.2.1</span>
+    package libc-5.2.1 is not installed
+</code></pre></div><p>正如你能看到的，RPM对于包名是大小写敏感的，并且不接受没有写全的包名、版本号和发行号。而且它也不能使用通配符。但是从上面我们可以看到，给出包名片的一部分信息依然是能找到该包的，rpm -q libc-5.2.18和rpm -q libc-5.2.18-1都能正确地找到包libc-5.2.18-1。</p>
+<p>仅仅根据包名片来查询，显得有点寒酸。毕竟有的时候，你需要知道一个包的名字后才能去查询它的信息。不过，还有其他方式可以指定特定的包&hellip;</p>
+<h4 id="-a查询所有已经安装的包">-a：查询所有已经安装的包</h4>
+<p>使用-a选项能查询到在你系统上安装好的所有包：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qa</span>
+    ElectricFence-2.0.5-2
+    ImageMagick-3.7-2
+    …
+    tetex-xtexsh-0.3.3-8
+    lout-3.06-4
+</code></pre></div><p>其实-a的输出可能会有很多，因此上面省略了很多包。你可以使用<strong>more</strong>或者<strong>grep</strong>重定向输出。</p>
+<h4 id="-f-file查询有哪些包拥有文件file">-f <!-- raw HTML omitted -->：查询有哪些包拥有文件<!-- raw HTML omitted --></h4>
+<p>多少次你坐在你的电脑前看着一个程序，然而并不知道它是干嘛用的。如果这个程序是使用RPM安装的包所安装的一部分程序，那么很容易用RPM来得到你想要的答案。只要使用-f选项。例如，你找到一个陌生的程序叫做/bin/ls(好吧，大多数人对ls不陌生)，想要知道是哪个包安装了它吗？很简单：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qf /bin/ls</span>
+    fileutils-3.12-3
+</code></pre></div><p>如果你指定的文件并不是使用安装包安装的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qf .cshrc</span>
+    file /home/ed/.cshrc is not owned by any package
+</code></pre></div><h5 id="小骗局">小骗局</h5>
+<p>上述中，如果你得到了&quot;not owned by any package&rdquo;，其实并不代表文件不是一个安装包安装的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qf /usr/X11/bin/xterm</span>
+    file /usr/X11/bin/xterm is not owned by any package
+</code></pre></div><p>通过上面的消息，我们很容易认为xterm不是任何一个包所安装的。
+但是，让我们去它的目录下看看：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># ls -lF /usr</span>
+    …
+    lrwxrwxrwx   <span style="color:#ae81ff">1</span> root     root            <span style="color:#ae81ff">5</span> May <span style="color:#ae81ff">13</span> 12:46 X11 -&gt; X11R6/
+    drwxrwxr-x   <span style="color:#ae81ff">7</span> root     root         <span style="color:#ae81ff">1024</span> Mar <span style="color:#ae81ff">21</span> 00:21 X11R6/
+    …
+</code></pre></div><p>关键的地方就是这个<strong>X11 -&gt; X11R6/</strong>，这是一个符号链接，但RPM不认账，它只认X11，而不管X11R6。</p>
+<p>怎么办，有两种方法：</p>
+<ol>
+<li>不要使用符号链接来查询，这通常很难做到。不过可以通过namei命令来追踪链接的真实文件地址</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">        <span style="color:#75715e"># namei /usr/X11/bin/xterm</span>
+        f: /usr/X11/bin/xterm
+         d /
+         d usr
+         l X11 -&gt; X11R6
+           d X11R6
+         d bin
+         - xterm
+</code></pre></div><p>很显然，上面命令的输出结果中很容易看出X11到X11R6的符号链接，所以你可以使用真实的文件地址来获取信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">        <span style="color:#75715e"># rpm -qf /usr/X11R6/bin/xterm</span>
+        XFree86-3.1.2-5
+</code></pre></div><ol start="2">
+<li>直接切换到你所要查询文件的目录下，即使是个符号链接，也能带你到真实的路径下：</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">            <span style="color:#75715e"># cd /usr/X11/bin</span>
+            <span style="color:#75715e"># rpm -qf xterm</span>
+            XFree86-3.1.2-5
+</code></pre></div><p>当你遇到&quot;not owned by any package&rdquo; 时, 如果你心生怀疑，那么就试试上面两种方法吧。</p>
+<h4 id="-p-file查询一个特定的包">-p <!-- raw HTML omitted -->：查询一个特定的包</h4>
+<p>到目前为止，每个为RPM查询指定安装包的方法都侧重于那些已经被安装好的包。-p选项就是用来查询那些还没安装到你系统的中的包的。</p>
+<p>如果你需要了解一个包中的信息，但这个包的名字已经被改变过了。虽然包的名字改变过了，但是包的内容还没有改变过。我们查询的信息来源主要是从包里来。这时我们可以通过这个选项来找到这个包中到底包含了哪些内容：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qp foo.bar</span>
+    rpm-2.3-1
+</code></pre></div><p>只需要一个命令，RPM就能给你想要的答案。</p>
+<p>-p选项也能使用URL来指定包。</p>
+<p>-p选项还可以从标准输入中查询包的信息，例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># cat bother-3.5-1.i386.rpm | rpm -qp -</span>    
+    bother-3.5-1
+</code></pre></div><p>把cat的输出管道定向到RPM，最后一个**-**告诉RPM从标准输入中读取。</p>
+<h4 id="-g-group-查询属于某个组group的包的信息">-g <!-- raw HTML omitted -->: 查询属于某个组<!-- raw HTML omitted -->的包的信息</h4>
+<p>当包的创建者在创建包时，需要对包进行分类，以把功能相似的包分类到一起。RPM能够通过分组来查询包，例如，有一个分组名叫Base，这个分组的包都提供了比较底层的Linux功能，我们可以看看这个分组有哪些包组成：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qg Base</span>
+    setup-1.5-1
+    pamconfig-0.50-5
+    filesystem-1.2-1
+    crontabs-1.3-1
+    dev-2.3-1
+    etcskel-1.1-1
+    initscripts-2.73-1
+    mailcap-1.0-3
+    pam-0.50-17
+    passwd-0.50-2
+    redhat-release-4.0-1
+    rootfiles-1.3-1
+    termcap-9.12.6-5
+</code></pre></div><p>不过要注意的是分组名是大小写敏感的。rpm -qg base将不会查询到任何信息。</p>
+<h4 id="--whatprovides-x-查询具有x功能的包">&ndash;whatprovides <!-- raw HTML omitted -->: 查询具有<!-- raw HTML omitted -->功能的包</h4>
+<p>RPM对包之间的依赖提供了很多支持，一个包可能依赖于另一包所提供的功能。</p>
+<p>&ndash;whatprovides选项就是用来做这种事的，选项后面跟上一个功能，RPM就会查询到具有该功能的所有包，例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -q --whatprovides module-info</span>
+    kernel-2.0.18-5
+</code></pre></div><p>在这里，只有kernel-2.0.18-5提供了module-info的功能。</p>
+<h4 id="--whatrequires-x-查询出需要依赖于功能x的所有包">&ndash;whatrequires <!-- raw HTML omitted -->: 查询出需要依赖于功能<!-- raw HTML omitted -->的所有包</h4>
+<p>&ndash;whatrequires选项与上面的&ndash;whatprovides选项在逻辑上是对立的，用这个选项能找出需要依赖于特定功能的所有包，下面是一个例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -q --whatrequires module-info</span>
+    kernelcfg-0.3-2
+</code></pre></div><p>可以看到唯一需要module-info功能的包是kernelcfg-0.3-2</p>
+<h3 id="信息查询">信息查询</h3>
+<p>指定好包后，你可能需要指出你需要查找这个包的哪方面的信息，正如我们已经看到的，默认情况下，使用rpm -q只会返回包名片，但是包的信息可不止这些哦。接下来我们会查看所有我们能查找到的信息：</p>
+<h4 id="-i-查找包的详细信息">-i 查找包的详细信息</h4>
+<p>在rpm -q上加上-i选项将会给出包的详细信息 ：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#75715e"># rpm -qi rpm</span>
+    Name        : rpm                    Distribution: Red Hat Linux Vanderbilt
+    Version     : 2.3                          Vendor: Red Hat Software
+    Release     : <span style="color:#ae81ff">1</span>                        Build Date: Tue Dec <span style="color:#ae81ff">24</span> 09:07:59 <span style="color:#ae81ff">1996</span>
+    Install date: Thu Dec <span style="color:#ae81ff">26</span> 23:01:51 <span style="color:#ae81ff">1996</span> Build Host: porky.redhat.com
+    Group       : Utilities/System         Source RPM: rpm-2.3-1.src.rpm
+    Size        : <span style="color:#ae81ff">631157</span>
+    Summary     : Red Hat Package Manager
+    Description :
+    RPM is a powerful package manager, which can be used to build, install,
+    query, verify, update, and uninstall individual software packages. A
+    package consists of an archive of files, and package information, including
+    name, version, and description.
+</code></pre></div><p>上面各项信息的意义如下所示：</p>
+<ul>
+<li>Name &ndash; 包名</li>
+<li>Version&ndash; 包的版本</li>
+<li>Release &ndash; 发行号</li>
+<li>Install date &ndash; 安装日期</li>
+<li>Group &ndash; 分组名</li>
+<li>Size &ndash; 包的大小，以byte为单位</li>
+<li>Summary &ndash; 简洁的描述</li>
+<li>Description &ndash; 详细的描述</li>
+<li>Distribution &ndash; 所属产品</li>
+<li>Vendor &ndash; 软件的作者</li>
+<li>Build Date &ndash; 安装包的构建时间</li>
+<li>Build Host &ndash; 构建时所在的系统类型</li>
+<li>Source RPM &ndash; 源码包</li>
+</ul>
+<h4 id="-l查找包所安装的所有文件">-l：查找包所安装的所有文件</h4>
+<p>通过加上-l选项能查找出安装包安装的所有文件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># rpm -ql adduser</span>
+/usr/sbin/adduser
+</code></pre></div><p>由于adduser只安装了一个文件，所以只有一个文件被列出来。</p>
+<h2 id="参考资料">参考资料</h2>
+<p><a href="http://rpm5.org/docs/max-rpm.html#s2-rpm-query-information-selection">Maximum RPM</a></p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>952</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2015%2flinux-rpm%2f&amp;appkey=&amp;title=%e8%b5%b0%e8%bf%9b%20Linux%20Rpm" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2015/jedis-sharded-explain/" class="prev" rel="prev" title="Jedis的Sharded源代码分析"><i class="iconfont icon-dajiantou"></i>&nbsp;Jedis的Sharded源代码分析</a>
+         
+        
+        <a href="/2016/java-lifecycle/" class="next" rel="next" title="Java 实现生命周期管理机制">Java 实现生命周期管理机制&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2015-08-03 19:29:46 \u002b0800 CST',
+              title: '走进 Linux Rpm',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

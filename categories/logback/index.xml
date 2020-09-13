@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>logback on beanlam</title>
+    <link>/categories/logback/</link>
+    <description>Recent content in logback on beanlam</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>cn</language>
+    <lastBuildDate>Fri, 10 Feb 2017 19:35:24 +0800</lastBuildDate>
+    
+	<atom:link href="/categories/logback/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Logback 使用详解</title>
+      <link>/2017/logback-usage/</link>
+      <pubDate>Fri, 10 Feb 2017 19:35:24 +0800</pubDate>
+      
+      <guid>/2017/logback-usage/</guid>
+      <description>概览 简单地说，Logback 是一个 Java 领域的日志框架。它被认为是 Log4J 的继承人。 Logback 主要由三个模块组成：
+ logback-core logback-classic logback-access  logback-core 是其它模块的基础设施，其它模块基于它构建，显然，logback-core 提供了一些关键的通用机制。logback-classic 的地位和作用等同于 Log4J，它也被认为是 Log4J 的一个改进版，并且它实现了简单日志门面 SLF4J；而 logback-access 主要作为一个与 Servlet 容器交互的模块，比如说 tomcat 或者 jetty，提供一些与 HTTP 访问相关的功能。
+目前 Logback 的使用很广泛，很多知名的开源软件都使用了 Logback作为日志框架，比如说 Akka，Apache Camel 等。
+Logback 与 Log4J 实际上，这两个日志框架都出自同一个开发者之手，Logback 相对于 Log4J 有更多的优点
+ 同样的代码路径，Logback 执行更快 更充分的测试 原生实现了 SLF4J API（Log4J 还需要有一个中间转换层） 内容更丰富的文档 支持 XML 或者 Groovy 方式配置 配置文件自动热加载 从 IO 错误中优雅恢复 自动删除日志归档 自动压缩日志成为归档文件 支持 Prudent 模式，使多个 JVM 进程能记录同一个日志文件 支持配置文件中加入条件判断来适应不同的环境 更强大的过滤器 支持 SiftingAppender（可筛选 Appender） 异常栈信息带有包信息  快速上手 想在 Java 程序中使用 Logback，需要依赖三个 jar 包，分别是 slf4j-api，logback-core，logback-classic。其中 slf4j-api 并不是 Logback 的一部分，是另外一个项目，但是强烈建议将 slf4j 与 Logback 结合使用。要引用这些 jar 包，在 maven 项目中引入以下3个 dependencies</description>
+    </item>
+    
+  </channel>
+</rss>

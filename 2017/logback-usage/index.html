@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/jdbc4.2-spec-11/" />
+  <link rel="next" href="/2017/java-trouble-shooting/" />
+  <link rel="canonical" href="/2017/logback-usage/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           Logback 使用详解 | beanlam
+       
+  </title>
+  <meta name="title" content="Logback 使用详解 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Logback 使用详解"/>
+<meta name="twitter:description" content="概览 简单地说，Logback 是一个 Java 领域的日志框架。它被认为是 Log4J 的继承人。 Logback 主要由三个模块组成：
+ logback-core logback-classic logback-access  logback-core 是其它模块的基础设施，其它模块基于它构建，显然，logback-core 提供了一些关键的通用机制。logback-classic 的地位和作用等同于 Log4J，它也被认为是 Log4J 的一个改进版，并且它实现了简单日志门面 SLF4J；而 logback-access 主要作为一个与 Servlet 容器交互的模块，比如说 tomcat 或者 jetty，提供一些与 HTTP 访问相关的功能。
+目前 Logback 的使用很广泛，很多知名的开源软件都使用了 Logback作为日志框架，比如说 Akka，Apache Camel 等。
+Logback 与 Log4J 实际上，这两个日志框架都出自同一个开发者之手，Logback 相对于 Log4J 有更多的优点
+ 同样的代码路径，Logback 执行更快 更充分的测试 原生实现了 SLF4J API（Log4J 还需要有一个中间转换层） 内容更丰富的文档 支持 XML 或者 Groovy 方式配置 配置文件自动热加载 从 IO 错误中优雅恢复 自动删除日志归档 自动压缩日志成为归档文件 支持 Prudent 模式，使多个 JVM 进程能记录同一个日志文件 支持配置文件中加入条件判断来适应不同的环境 更强大的过滤器 支持 SiftingAppender（可筛选 Appender） 异常栈信息带有包信息  快速上手 想在 Java 程序中使用 Logback，需要依赖三个 jar 包，分别是 slf4j-api，logback-core，logback-classic。其中 slf4j-api 并不是 Logback 的一部分，是另外一个项目，但是强烈建议将 slf4j 与 Logback 结合使用。要引用这些 jar 包，在 maven 项目中引入以下3个 dependencies"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Logback 使用详解",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/logback-usage\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  2998 ,
+  "url": "\/2017\/logback-usage\/",
+  "datePublished": "2017-02-10T19:35:24\u002b08:00",
+  "dateModified": "2017-02-10T19:35:24\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">Logback 使用详解</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-02-10 >10 February 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/logback/"> logback </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                15 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="概览">概览</h1>
+<p>简单地说，Logback 是一个 Java 领域的日志框架。它被认为是 Log4J 的继承人。
+Logback 主要由三个模块组成：</p>
+<ul>
+<li>logback-core</li>
+<li>logback-classic</li>
+<li>logback-access</li>
+</ul>
+<p>logback-core 是其它模块的基础设施，其它模块基于它构建，显然，logback-core 提供了一些关键的通用机制。logback-classic 的地位和作用等同于 Log4J，它也被认为是 Log4J 的一个改进版，并且它实现了简单日志门面 SLF4J；而 logback-access 主要作为一个与 Servlet 容器交互的模块，比如说 tomcat 或者 jetty，提供一些与 HTTP 访问相关的功能。</p>
+<p>目前 Logback 的使用很广泛，很多知名的开源软件都使用了 Logback作为日志框架，比如说 Akka，Apache Camel 等。</p>
+<h1 id="logback-与-log4j">Logback 与 Log4J</h1>
+<p>实际上，这两个日志框架都出自同一个开发者之手，Logback 相对于 Log4J 有更多的优点</p>
+<ul>
+<li>同样的代码路径，Logback 执行更快</li>
+<li>更充分的测试</li>
+<li>原生实现了 SLF4J API（Log4J 还需要有一个中间转换层）</li>
+<li>内容更丰富的文档</li>
+<li>支持 XML 或者 Groovy 方式配置</li>
+<li>配置文件自动热加载</li>
+<li>从 IO 错误中优雅恢复</li>
+<li>自动删除日志归档</li>
+<li>自动压缩日志成为归档文件</li>
+<li>支持 Prudent 模式，使多个 JVM 进程能记录同一个日志文件</li>
+<li>支持配置文件中加入条件判断来适应不同的环境</li>
+<li>更强大的过滤器</li>
+<li>支持 SiftingAppender（可筛选 Appender）</li>
+<li>异常栈信息带有包信息</li>
+</ul>
+<h1 id="快速上手">快速上手</h1>
+<p>想在 Java 程序中使用 Logback，需要依赖三个 jar 包，分别是 slf4j-api，logback-core，logback-classic。其中 slf4j-api 并不是 Logback 的一部分，是另外一个项目，但是强烈建议将 slf4j 与 Logback 结合使用。要引用这些 jar 包，在 maven 项目中引入以下3个 dependencies</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">        <span style="color:#f92672">&lt;dependency&gt;</span>
+			<span style="color:#f92672">&lt;groupId&gt;</span>org.slf4j<span style="color:#f92672">&lt;/groupId&gt;</span>
+			<span style="color:#f92672">&lt;artifactId&gt;</span>slf4j-api<span style="color:#f92672">&lt;/artifactId&gt;</span>
+			<span style="color:#f92672">&lt;version&gt;</span>1.7.5<span style="color:#f92672">&lt;/version&gt;</span>
+		<span style="color:#f92672">&lt;/dependency&gt;</span>
+		<span style="color:#f92672">&lt;dependency&gt;</span>
+			<span style="color:#f92672">&lt;groupId&gt;</span>ch.qos.logback<span style="color:#f92672">&lt;/groupId&gt;</span>
+			<span style="color:#f92672">&lt;artifactId&gt;</span>logback-core<span style="color:#f92672">&lt;/artifactId&gt;</span>
+			<span style="color:#f92672">&lt;version&gt;</span>1.0.11<span style="color:#f92672">&lt;/version&gt;</span>
+		<span style="color:#f92672">&lt;/dependency&gt;</span>
+		<span style="color:#f92672">&lt;dependency&gt;</span>
+			<span style="color:#f92672">&lt;groupId&gt;</span>ch.qos.logback<span style="color:#f92672">&lt;/groupId&gt;</span>
+			<span style="color:#f92672">&lt;artifactId&gt;</span>logback-classic<span style="color:#f92672">&lt;/artifactId&gt;</span>
+			<span style="color:#f92672">&lt;version&gt;</span>1.0.11<span style="color:#f92672">&lt;/version&gt;</span>
+		<span style="color:#f92672">&lt;/dependency&gt;</span>
+</code></pre></div><h2 id="第一个简单的例子">第一个简单的例子</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> io.beansoft.logback.demo.universal<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> org.slf4j.Logger<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.slf4j.LoggerFactory<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @date 2017年2月9日 下午11:17:53
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SimpleDemo</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Logger logger <span style="color:#f92672">=</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span>SimpleDemo<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">info</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Hello, this is a line of log message logged by Logback&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>以上代码的运行结果是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">23:19:41.131 <span style="color:#f92672">[</span>main<span style="color:#f92672">]</span> INFO  i.b.l.demo.universal.SimpleDemo - Hello, this is a line of log message logged by Logback
+</code></pre></div><p>注意到这里，代码里并没有引用任何一个跟 Logback 相关的类，而是引用了 SLF4J 相关的类，这边是使用 SLF4J 的好处，在需要将日志框架切换为其它日志框架时，无需改动已有的代码。</p>
+<p><code>LoggerFactory</code> 的 <code>getLogger()</code> 方法接收一个参数，以这个参数决定 logger 的名字，这里传入了 <code>SimpleDemo</code> 这个类的 Class 实例，那么 logger 的名字便是 <code>SimpleDemo</code> 这个类的全限定类名：<code>io.beansoft.logback.demo.universal.SimpleDemo</code></p>
+<h2 id="让-logback-打印出一些它自身的内部消息">让 Logback 打印出一些它自身的内部消息</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> io.beansoft.logback.demo.universal<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> org.slf4j.Logger<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.slf4j.LoggerFactory<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> ch.qos.logback.classic.LoggerContext<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.util.StatusPrinter<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @date 2017年2月9日 下午11:31:55
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LogInternalStateDemo</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Logger logger <span style="color:#f92672">=</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span>LogInternalStateDemo<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">);</span>
+    
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">info</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Hello world&#34;</span><span style="color:#f92672">);</span>
+        
+        <span style="color:#75715e">//打印 Logback 内部状态
+</span><span style="color:#75715e"></span>        LoggerContext lc <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>LoggerContext<span style="color:#f92672">)</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getILoggerFactory</span><span style="color:#f92672">();</span>
+        StatusPrinter<span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span>lc<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>除了打印正常的日志信息，还打印出了 Logback 自身的内部状态信息</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">23:33:19.340 <span style="color:#f92672">[</span>main<span style="color:#f92672">]</span> INFO  i.b.l.d.u.LogInternalStateDemo - Hello world
+23:33:19,265 |-INFO in ch.qos.logback.classic.LoggerContext<span style="color:#f92672">[</span>default<span style="color:#f92672">]</span> - Could NOT find resource <span style="color:#f92672">[</span>logback.groovy<span style="color:#f92672">]</span>
+23:33:19,265 |-INFO in ch.qos.logback.classic.LoggerContext<span style="color:#f92672">[</span>default<span style="color:#f92672">]</span> - Could NOT find resource <span style="color:#f92672">[</span>logback-test.xml<span style="color:#f92672">]</span>
+23:33:19,265 |-INFO in ch.qos.logback.classic.LoggerContext<span style="color:#f92672">[</span>default<span style="color:#f92672">]</span> - Could NOT find resource <span style="color:#f92672">[</span>logback.xml<span style="color:#f92672">]</span>
+23:33:19,266 |-INFO in ch.qos.logback.classic.LoggerContext<span style="color:#f92672">[</span>default<span style="color:#f92672">]</span> - Setting up default configuration.
+</code></pre></div><h1 id="loggerappenders-与-layouts">Logger，Appenders 与 Layouts</h1>
+<p>在 logback 里，最重要的三个类分别是</p>
+<ul>
+<li>Logger</li>
+<li>Appender</li>
+<li>Layout</li>
+</ul>
+<p>Logger 类位于 logback-classic 模块中， 而 Appender 和 Layout 位于 logback-core 中，这意味着， Appender 和 Layout 并不关心 Logger 的存在，不依赖于 Logger，同时也能看出， Logger 会依赖于 Appender 和 Layout 的协助，日志信息才能被正常打印出来。</p>
+<h2 id="分层命名规则">分层命名规则</h2>
+<p>为了可以控制哪些信息需要输出，哪些信息不需要输出，logback 中引进了一个 分层 概念。每个 logger 都有一个 name，这个 name 的格式与 Java 语言中的包名格式相同。这也是前面的例子中直接把一个 class 对象传进 LoggerFactory.getLogger() 方法作为参数的原因。</p>
+<p>logger 的 name 格式决定了多个 logger 能够组成一个树状的结构，为了维护这个分层的树状结构，每个 logger 都被绑定到一个 logger 上下文中，这个上下文负责厘清各个 logger 之间的关系。</p>
+<p>例如， 命名为 <code>io.beansoft</code> 的 logger，是命名为 <code>io.beansoft.logback</code> 的 logger 的父亲，是命名为 <code>io.beansoft.logback.demo</code> 的 logger 的祖先。</p>
+<p>在 logger 上下文中，有一个 root logger，作为所有 logger 的祖先，这是 logback 内部维护的一个 logger，并非开发者自定义的 logger。</p>
+<p>可通过以下方式获得这个 logger :</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">Logger rootLogger <span style="color:#f92672">=</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span>org<span style="color:#f92672">.</span><span style="color:#a6e22e">slf4j</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Logger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ROOT_LOGGER_NAME</span><span style="color:#f92672">);</span>
+</code></pre></div><p>同样，通过 logger 的 name，就能获得对应的其它 logger 实例。</p>
+<p><code>Logger</code> 这个接口主要定义的方法有：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> org.slf4j<span style="color:#f92672">;</span> 
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">Logger</span> <span style="color:#f92672">{</span>
+
+  <span style="color:#75715e">// Printing methods: 
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">trace</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">info</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">);</span> 
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">warn</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">);</span> 
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">error</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">);</span> 
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="日志打印级别">日志打印级别</h2>
+<p>logger 有日志打印级别，可以为一个 logger 指定它的日志打印级别。
+如果不为一个 logger 指定打印级别，那么它将继承离他最近的一个有指定打印级别的祖先的打印级别。这里有一个容易混淆想不清楚的地方，如果 logger 先找它的父亲，而它的父亲没有指定打印级别，那么它会立即忽略它的父亲，往上继续寻找它爷爷，直到它找到 root logger。因此，也能看出来，要使用 logback， 必须为 root logger 指定日志打印级别。</p>
+<p>日志打印级别从低级到高级排序的顺序是：
+<code>TRACE &lt; DEBUG &lt; INFO &lt;  WARN &lt; ERROR </code>
+如果一个 logger 允许打印一条具有某个日志级别的信息，那么它也必须允许打印具有比这个日志级别更高级别的信息，而不允许打印具有比这个日志级别更低级别的信息。</p>
+<p>举个例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> io.beansoft.logback.demo.universal<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> org.slf4j.Logger<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.slf4j.LoggerFactory<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> ch.qos.logback.classic.Level<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @date 2017年2月10日 上午12:20:33
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LogLevelDemo</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        
+        <span style="color:#75715e">//这里强制类型转换时为了能设置 logger 的 Level
+</span><span style="color:#75715e"></span>        ch<span style="color:#f92672">.</span><span style="color:#a6e22e">qos</span><span style="color:#f92672">.</span><span style="color:#a6e22e">logback</span><span style="color:#f92672">.</span><span style="color:#a6e22e">classic</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Logger</span> logger <span style="color:#f92672">=</span> 
+                <span style="color:#f92672">(</span>ch<span style="color:#f92672">.</span><span style="color:#a6e22e">qos</span><span style="color:#f92672">.</span><span style="color:#a6e22e">logback</span><span style="color:#f92672">.</span><span style="color:#a6e22e">classic</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Logger</span><span style="color:#f92672">)</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;com.foo&#34;</span><span style="color:#f92672">);</span>
+        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">setLevel</span><span style="color:#f92672">(</span>Level<span style="color:#f92672">.</span><span style="color:#a6e22e">INFO</span><span style="color:#f92672">);</span>
+        
+        Logger barlogger <span style="color:#f92672">=</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;com.foo.Bar&#34;</span><span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// 这个语句能打印，因为 WARN &gt; INFO
+</span><span style="color:#75715e"></span>        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">warn</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;can be printed because WARN &gt; INFO&#34;</span><span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// 这个语句不能打印，因为 DEBUG &lt; INFO. 
+</span><span style="color:#75715e"></span>        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;can not be printed because DEBUG &lt; INFO&#34;</span><span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// barlogger 是 logger 的一个子 logger
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// 它继承了 logger 的级别 INFO
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// 以下语句能打印，因为 INFO &gt;= INFO
+</span><span style="color:#75715e"></span>        barlogger<span style="color:#f92672">.</span><span style="color:#a6e22e">info</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;can be printed because INFO &gt;= INFO&#34;</span><span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// 以下语句不能打印，因为 DEBUG &lt; INFO
+</span><span style="color:#75715e"></span>        barlogger<span style="color:#f92672">.</span><span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;can not be printed because DEBUG &lt; INFO&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>打印结果是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">00:27:19.251 <span style="color:#f92672">[</span>main<span style="color:#f92672">]</span> WARN  com.foo - can be printed because WARN &gt; INFO
+00:27:19.255 <span style="color:#f92672">[</span>main<span style="color:#f92672">]</span> INFO  com.foo.Bar - can be printed because INFO &gt;<span style="color:#f92672">=</span> INFO
+</code></pre></div><h2 id="获取-logger">获取 logger</h2>
+<p>在 logback 中，每个 logger 都是一个单例，调用 <code>LoggerFactory.getLogger</code> 方法时，如果传入的 logger name 相同，获取到的 logger 都是同一个实例。</p>
+<p>在为 logger 命名时，用类的全限定类名作为 logger name 是最好的策略，这样能够追踪到每一条日志消息的来源。</p>
+<h2 id="appender-和-layout">Appender 和 Layout</h2>
+<p>在 logback 的世界中，日志信息不仅仅可以打印至 console，也可以打印至文件，甚至输出到网络流中，日志打印的目的地由 Appender 来决定，不同的 Appender 能将日志信息打印到不同的目的地去。</p>
+<p>Appender 是绑定在 logger 上的，同时，一个 logger 可以绑定多个 Appender，意味着一条信息可以同时打印到不同的目的地去。例如，常见的做法是，日志信息既输出到控制台，同时也记录到日志文件中，这就需要为 logger 绑定两个不同的 logger。</p>
+<p>Appender 是绑定在 logger 上的，而 logger 又有继承关系，因此一个 logger 打印信息时的目的地 Appender 需要参考它的父亲和祖先。在 logback 中，默认情况下，如果一个 logger 打印一条信息，那么这条信息首先会打印至它自己的 Appender，然后打印至它的父亲和父亲以上的祖先的 Appender，但如果它的父亲设置了 <code>additivity = false</code>，那么这个 logger 除了打印至它自己的 Appender 外，只会打印至其父亲的 Appender，因为它的父亲的 <code>additivity</code> 属性置为了 false，开始变得忘祖忘宗了，所以这个 logger 只认它父亲的 Appender；此外，对于这个 logger 的父亲来说，如果父亲的 logger 打印一条信息，那么它只会打印至自己的 Appender中（如果有的话），因为父亲已经忘记了爷爷及爷爷以上的那些父辈了。</p>
+<p>打印的日志除了有打印的目的地外，还有日志信息的展示格式。在 logback 中，用 Layout 来代表日志打印格式。比如说，PatternLayout 能够识别以下这条格式：
+<code>%-4relative [%thread] %-5level %logger{32} - %msg%n</code>
+然后打印出来的格式效果是：
+<code>176  [main] DEBUG manual.architecture.HelloWorld2 - Hello world.</code></p>
+<p>上面这个格式的第一个字段代表从程序启动开始后经过的毫秒数，第二个字段代表打印出这条日志的线程名字，第三个字段代表日志信息的日志打印级别，第四个字段代表 logger name，第五个字段是日志信息，第六个字段仅仅是代表一个换行符。</p>
+<h2 id="参数化打印日志">参数化打印日志</h2>
+<p>经常能看到打印日志的时候，使用以下这种方式打印日志：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">logger<span style="color:#f92672">.</span><span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;the message is &#34;</span> <span style="color:#f92672">+</span> msg <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; from &#34;</span> <span style="color:#f92672">+</span> somebody<span style="color:#f92672">);</span>
+</code></pre></div><p>这种打印日志的方式有个缺点，就是无论日志级别是什么，程序总要先执行 <code>&quot;the message is &quot; + msg + &quot; from &quot; + somebody</code> 这段字符串的拼接操作。当 logger 设置的日志级别为比 DEBUG 级别更高级别时，DEBUG 级别的信息不回被打印出来的，显然，字符串拼接的操作是不必要的，当要拼接的字符串很大时，这无疑会带来很大的性能白白损耗。</p>
+<p>于是，一种改进的打印日志方式被人们发现了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span><span style="color:#f92672">(</span>logger<span style="color:#f92672">.</span><span style="color:#a6e22e">isDebugEnabled</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span> 
+  logger<span style="color:#f92672">.</span><span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;the message is &#34;</span> <span style="color:#f92672">+</span> msg <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; from &#34;</span> <span style="color:#f92672">+</span> somebody<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>这样的方式确实能避免字符串拼接的不必要损耗，但这也不是最好的方法，当日志级别为 DEBUG 时，那么打印这行消息，需要判断两次日志级别。一次是<code>logger.isDebugEnabled()</code>，另一次是 <code>logger.debug()</code> 方法内部也会做的判断。这样也会带来一点点效率问题，如果能找到更好的方法，谁愿意无视白白消耗的效率。</p>
+<p>有一种更好的方法，那就是提供占位符的方式，以参数化的方式打印日志，例如上述的语句，可以是这样的写法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">logger<span style="color:#f92672">.</span><span style="color:#a6e22e">debug</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;the message {} is from {}&#34;</span><span style="color:#f92672">,</span> msg<span style="color:#f92672">,</span> somebody<span style="color:#f92672">);</span>
+</code></pre></div><p>这样的方式，避免了字符串拼接，也避免了多一次日志级别的判断。</p>
+<h2 id="logback-内部运行流程">logback 内部运行流程</h2>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/logback-usage/logbackinternal.gif" alt="内部运行流程图" class="lazyload"><figcaption class="image-caption">内部运行流程图</figcaption></figure>
+当应用程序发起一个记录日志的请求，例如 info() 时，logback 的内部运行流程如下所示</p>
+<ol>
+<li>获得过滤器链条</li>
+<li>检查日志级别以决定是否继续打印</li>
+<li>创建一个 <code>LoggingEvent</code> 对象</li>
+<li>调用 Appenders</li>
+<li>进行日志信息格式化</li>
+<li>发送 <code>LoggingEvent</code> 到对应的目的地</li>
+</ol>
+<h2 id="有关性能问题">有关性能问题</h2>
+<p>关于日志系统，人们讨论得最多的是性能问题，即使是小型的应用程序，也有可能输出大量的日志。打印日志中的不当处理，会引发各种性能问题，例如太多的日志记录请求可能使磁盘 IO 成为性能瓶颈，从而影响到应用程序的正常运行。在合适的时候记录日志、以更好的方式发起日志请求、以及合理设置日志级别方面，都有可能造成性能问题。
+关于性能问题，以下几个方面需要了解</p>
+<ul>
+<li>建议使用占位符的方式参数化记录日志</li>
+<li>logback 内部机制保证 logger 在记录日志时，不必每一次都去遍历它的父辈以获得关于日志级别、Appender 的信息</li>
+<li>在 logback 中，将日志信息格式化，以及输出到目的地，是最损耗性能的操作</li>
+</ul>
+<h1 id="logback-配置">logback 配置</h1>
+<h2 id="配置须知">配置须知</h2>
+<h3 id="配置方式">配置方式</h3>
+<p>logback 提供的配置方式有以下几种：</p>
+<ul>
+<li>编程式配置</li>
+<li>xml 格式</li>
+<li>groovy 格式</li>
+</ul>
+<p>logback 在启动时，根据以下步骤寻找配置文件：</p>
+<ol>
+<li>在 classpath 中寻找 logback-test.xml文件</li>
+<li>如果找不到 logback-test.xml，则在 classpath 中寻找 logback.groovy 文件</li>
+<li>如果找不到 logback.groovy，则在 classpath  中寻找 logback.xml文件</li>
+<li>如果上述的文件都找不到，则 logback 会使用 JDK 的 SPI 机制查找 META-INF/services/ch.qos.logback.classic.spi.Configurator 中的 logback 配置实现类，这个实现类必须实现 <code>Configuration</code> 接口，使用它的实现来进行配置</li>
+<li>如果上述操作都不成功，logback 就会使用它自带的 <code>BasicConfigurator</code> 来配置，并将日志输出到 console</li>
+</ol>
+<p>logback-test.xml 一般用来在测试代码中打日志，如果是 maven 项目，一般把 logback-test.xml 放在 src/test/resources 目录下。maven 打包的时候也不会把这个文件打进 jar 包里。
+logback 启动的时候解析配置文件大概需要 100 毫秒的时间，如果希望更快启动，可以采用 SPI 的方式。</p>
+<h3 id="默认的配置">默认的配置</h3>
+<p>前面有提到默认的配置，由 <code>BasicConfiguator</code> 类配置而成，这个类的配置可以用如下的配置文件来表示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#75715e">&lt;!-- encoders are assigned the type
+</span><span style="color:#75715e">         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default --&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h3 id="启动时打印状态信息">启动时打印状态信息</h3>
+<p>如果 logback 在启动时，解析配置文件时，出现了需要警告的信息或者错误信息，那 logback 会自动先打印出自身的状态信息。</p>
+<p>如果希望正常情况下也打印出状态信息，则可以使用之前提到的方式，在代码里显式地调用使其输出：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e">// assume SLF4J is bound to logback in the current environment
+</span><span style="color:#75715e"></span>  LoggerContext lc <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>LoggerContext<span style="color:#f92672">)</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getILoggerFactory</span><span style="color:#f92672">();</span>
+  <span style="color:#75715e">// print logback&#39;s internal status
+</span><span style="color:#75715e"></span>  StatusPrinter<span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span>lc<span style="color:#f92672">);</span>
+  <span style="color:#f92672">...</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>也可以在配置文件中，指定 configuration 的 debug 属性为 true</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration</span> <span style="color:#a6e22e">debug=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
+	<span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+		<span style="color:#75715e">&lt;!-- encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
+</span><span style="color:#75715e">			by default --&gt;</span>
+		<span style="color:#f92672">&lt;encoder&gt;</span>
+			<span style="color:#f92672">&lt;pattern&gt;</span>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+			<span style="color:#f92672">&lt;/pattern&gt;</span>
+		<span style="color:#f92672">&lt;/encoder&gt;</span>
+	<span style="color:#f92672">&lt;/appender&gt;</span>
+
+	<span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+		<span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#f92672">/&gt;</span>
+	<span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>还可以指定一个 Listener：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;statusListener</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.status.OnConsoleStatusListener&#34;</span> <span style="color:#f92672">/&gt;</span>  
+  ... the rest of the configuration file  
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h3 id="重置默认的配置文件位置">重置默认的配置文件位置</h3>
+<p>设置 <strong>logback.configurationFile</strong> 系统变量，可以通过 -D 参数设置，所指定的文件名必须以 .xml 或者 .groovy 作为文件后缀，否则 logback 会忽略这些文件。</p>
+<h3 id="配置文件自动热加载">配置文件自动热加载</h3>
+<p>要使配置文件自动重载，需要把 scan 属性设置为 true，默认情况下每分钟才会扫描一次，可以指定扫描间隔：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>configuration scan<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;true&#34;</span> scanPeriod<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;30 seconds&#34;</span> <span style="color:#f92672">&gt;</span> 
+  <span style="color:#f92672">...</span>
+<span style="color:#f92672">&lt;/</span>configuration<span style="color:#f92672">&gt;</span> 
+</code></pre></div><p>注意扫描间隔要加上单位，可用的单位是 milliseconds，seconds，minutes 和 hours。如果只指定了数字，但没有指定单位，这默认单位为 milliseconds。</p>
+<p>在 logback 内部，当设置 scan 属性为 true 后，一个叫做 <code>ReconfigureOnChangeFilter</code> 的过滤器就会被牵扯进来，它负责判断是否到了该扫描的时候，以及是否该重新加载配置。Logger 的任何一个打印日志的方法被调用时，都会触发这个过滤器，所以关于这个过滤器的自身的性能问题，变得十分重要。logback 目前采用这样一种机制，当 logger 的调用次数到达一定次数后，才真正让过滤器去做它要做的事情，这个次数默认是 16，而 logback 会在运行时根据调用的频繁度来动态调整这个数目。</p>
+<h3 id="输出异常栈时也打印出-jar-包的信息">输出异常栈时也打印出 jar 包的信息</h3>
+<p>这个属性默认是关闭，可通过以下方式开启：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration</span> <span style="color:#a6e22e">packagingData=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
+  ...
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>也可以通过 LoggerContext 的 setPackagingDataEnabled(boolean) 方法来开启</p>
+<pre><code> LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+ lc.setPackagingDataEnabled(true);
+</code></pre><h3 id="直接调用-joranconfigurator">直接调用 JoranConfigurator</h3>
+<p><strong>Joran</strong> 是 logback 使用的一个配置加载库，如果想要重新实现 logback 的配置机制，可以直接调用这个类 <code>JoranConfigurator</code> 来实现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> chapters.configuration<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> org.slf4j.Logger<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.slf4j.LoggerFactory<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> ch.qos.logback.classic.LoggerContext<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.classic.joran.JoranConfigurator<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.joran.spi.JoranException<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.util.StatusPrinter<span style="color:#f92672">;</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyApp3</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">static</span> Logger logger <span style="color:#f92672">=</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getLogger</span><span style="color:#f92672">(</span>MyApp3<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">);</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// assume SLF4J is bound to logback in the current environment
+</span><span style="color:#75715e"></span>    LoggerContext context <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>LoggerContext<span style="color:#f92672">)</span> LoggerFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getILoggerFactory</span><span style="color:#f92672">();</span>
+    
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      JoranConfigurator configurator <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> JoranConfigurator<span style="color:#f92672">();</span>
+      configurator<span style="color:#f92672">.</span><span style="color:#a6e22e">setContext</span><span style="color:#f92672">(</span>context<span style="color:#f92672">);</span>
+      <span style="color:#75715e">// Call context.reset() to clear any previous configuration, e.g. default 
+</span><span style="color:#75715e"></span>      <span style="color:#75715e">// configuration. For multi-step configuration, omit calling context.reset().
+</span><span style="color:#75715e"></span>      context<span style="color:#f92672">.</span><span style="color:#a6e22e">reset</span><span style="color:#f92672">();</span> 
+      configurator<span style="color:#f92672">.</span><span style="color:#a6e22e">doConfigure</span><span style="color:#f92672">(</span>args<span style="color:#f92672">[</span>0<span style="color:#f92672">]);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>JoranException je<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#75715e">// StatusPrinter will handle this
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+    StatusPrinter<span style="color:#f92672">.</span><span style="color:#a6e22e">printInCaseOfErrorsOrWarnings</span><span style="color:#f92672">(</span>context<span style="color:#f92672">);</span>
+
+    logger<span style="color:#f92672">.</span><span style="color:#a6e22e">info</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Entering application.&#34;</span><span style="color:#f92672">);</span>
+
+    Foo foo <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Foo<span style="color:#f92672">();</span>
+    foo<span style="color:#f92672">.</span><span style="color:#a6e22e">doIt</span><span style="color:#f92672">();</span>
+    logger<span style="color:#f92672">.</span><span style="color:#a6e22e">info</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Exiting application.&#34;</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="配置文件格式">配置文件格式</h2>
+<h3 id="配置文件的基本结构">配置文件的基本结构</h3>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/logback-usage/configstruct.jpg" alt="配置文件基本结构" class="lazyload"><figcaption class="image-caption">配置文件基本结构</figcaption></figure></p>
+<p>根节点是 configuration，可包含0个或多个 appender，0个或多个 logger，最多一个 root。</p>
+<h3 id="配置-logger-节点">配置 logger 节点</h3>
+<p>在配置文件中，logger 的配置在
+<!-- raw HTML omitted --> 标签中配置，<!-- raw HTML omitted --> 标签只有一个属性是一定要的，那就是 name，除了 name 属性，还有 level 属性，additivity 属性可以配置，不过它们是可选的。
+level 的取值可以是 <code>TRACE, DEBUG, INFO, WARN, ERROR, ALL, OFF, INHERITED, NULL</code>， 其中 <code>INHERITED</code> 和 <code>NULL</code> 的作用是一样的，并不是不打印任何日志，而是强制这个 logger 必须从其父辈继承一个日志级别。
+additivity 的取值是一个布尔值，true 或者 false。</p>
+<p><!-- raw HTML omitted --> 标签下只有一种元素，那就是 <!-- raw HTML omitted -->，可以有0个或多个，意味着绑定到这个 logger 上的 Appender。</p>
+<h3 id="配置-root-节点">配置 root 节点</h3>
+<p><!-- raw HTML omitted --> 标签和 <!-- raw HTML omitted --> 标签的配置类似，只不过 <!-- raw HTML omitted --> 标签只允许一个属性，那就是 level 属性，并且它的取值范围只能取 <code>TRACE, DEBUG, INFO, WARN, ERROR, ALL, OFF</code>。
+<!-- raw HTML omitted --> 标签下允许有0个或者多个 <!-- raw HTML omitted -->。</p>
+<h3 id="配置-appender-节点">配置 appender 节点</h3>
+<p><!-- raw HTML omitted --> 标签有两个必须填的属性，分别是 name 和 class，class 用来指定具体的实现类。<!-- raw HTML omitted --> 标签下可以包含至多一个 <!-- raw HTML omitted -->，0个或多个 <!-- raw HTML omitted -->，0个或多个 <!-- raw HTML omitted -->，除了这些标签外，<!-- raw HTML omitted --> 下可以包含一些类似于 JavaBean 的配置标签。</p>
+<p><!-- raw HTML omitted --> 包含了一个必须填写的属性 class，用来指定具体的实现类，不过，如果该实现类的类型是 <code>PatternLayout</code> 时，那么可以不用填写。<!-- raw HTML omitted --> 也和 <!-- raw HTML omitted --> 一样，可以包含类似于 JavaBean 的配置标签。
+<!-- raw HTML omitted --> 标签包含一个必须填写的属性 class，用来指定具体的实现类，如果该类的类型是 <code>PatternLayoutEncoder</code> ，那么 class 属性可以不填。
+如果想要往一个 logger 上绑定 appender，则使用以下方式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;logger</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;HELLO&#34;</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#f92672">/&gt;</span>
+<span style="color:#f92672">&lt;/logger&gt;</span>
+</code></pre></div><h3 id="设置-context-name">设置 Context Name</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;contextName&gt;</span>myAppName<span style="color:#f92672">&lt;/contextName&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%d %contextName [%t] %level %logger{36} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h3 id="变量替换">变量替换</h3>
+<p>在 logback 中，支持以 ${varName} 来引用变量</p>
+<h4 id="定义变量">定义变量</h4>
+<p>可以直接在 logback.xml 中定义变量</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;property</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;USER_HOME&#34;</span> <span style="color:#a6e22e">value=</span><span style="color:#e6db74">&#34;/home/sebastien&#34;</span> <span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>${USER_HOME}/myApp.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>也可以通过大D参数来定义</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">java -DUSER_HOME<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;/home/sebastien&#34;</span> MyApp2
+</code></pre></div><p>也可以通过外部文件来定义</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;property</span> <span style="color:#a6e22e">file=</span><span style="color:#e6db74">&#34;src/main/java/chapters/configuration/variables1.properties&#34;</span> <span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+     <span style="color:#f92672">&lt;file&gt;</span>${USER_HOME}/myApp.log<span style="color:#f92672">&lt;/file&gt;</span>
+     <span style="color:#f92672">&lt;encoder&gt;</span>
+       <span style="color:#f92672">&lt;pattern&gt;</span>%msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+     <span style="color:#f92672">&lt;/encoder&gt;</span>
+   <span style="color:#f92672">&lt;/appender&gt;</span>
+
+   <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+     <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+   <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>外部文件也支持 classpath 中的文件</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;property</span> <span style="color:#a6e22e">resource=</span><span style="color:#e6db74">&#34;resource1.properties&#34;</span> <span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+     <span style="color:#f92672">&lt;file&gt;</span>${USER_HOME}/myApp.log<span style="color:#f92672">&lt;/file&gt;</span>
+     <span style="color:#f92672">&lt;encoder&gt;</span>
+       <span style="color:#f92672">&lt;pattern&gt;</span>%msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+     <span style="color:#f92672">&lt;/encoder&gt;</span>
+   <span style="color:#f92672">&lt;/appender&gt;</span>
+
+   <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+     <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+   <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>外部文件的格式是 key-value 型。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">USER_HOME<span style="color:#f92672">=</span>/home/sebastien
+</code></pre></div><h4 id="变量的作用域">变量的作用域</h4>
+<p>变量有三个作用域</p>
+<ul>
+<li>local</li>
+<li>context</li>
+<li>system</li>
+</ul>
+<p>local 作用域在配置文件内有效，context 作用域的有效范围延伸至 logger context，system 作用域的范围最广，整个 JVM 内都有效。</p>
+<p>logback 在替换变量时，首先搜索 local 变量，然后搜索 context，然后搜索 system。</p>
+<p>如何为变量指定 scope ?</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;property</span> <span style="color:#a6e22e">scope=</span><span style="color:#e6db74">&#34;context&#34;</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;nodeId&#34;</span> <span style="color:#a6e22e">value=</span><span style="color:#e6db74">&#34;firstNode&#34;</span> <span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>/opt/${nodeId}/myApp.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;debug&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h4 id="变量的默认值">变量的默认值</h4>
+<p>在引用一个变量时，如果该变量未定义，那么可以为其指定默认值，做法是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">${aName:-golden}
+</code></pre></div><h4 id="运行时定义变量">运行时定义变量</h4>
+<p>需要使用 <!-- raw HTML omitted --> 标签，指定接口 <code>PropertyDfiner</code> 对应的实现类。如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;define</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;rootLevel&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;a.class.implementing.PropertyDefiner&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;shape&gt;</span>round<span style="color:#f92672">&lt;/shape&gt;</span>
+    <span style="color:#f92672">&lt;color&gt;</span>brown<span style="color:#f92672">&lt;/color&gt;</span>
+    <span style="color:#f92672">&lt;size&gt;</span>24<span style="color:#f92672">&lt;/size&gt;</span>
+  <span style="color:#f92672">&lt;/define&gt;</span>
+ 
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;${rootLevel}&#34;</span><span style="color:#f92672">/&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h4 id="条件化处理配置文件">条件化处理配置文件</h4>
+<p>logback 允许在配置文件中定义条件语句，以决定配置的不同行为，具体语法格式如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">   <span style="color:#75715e">&lt;!-- if-then form --&gt;</span>
+   <span style="color:#f92672">&lt;if</span> <span style="color:#a6e22e">condition=</span><span style="color:#e6db74">&#34;some conditional expression&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;then&gt;</span>
+      ...
+    <span style="color:#f92672">&lt;/then&gt;</span>
+  <span style="color:#f92672">&lt;/if&gt;</span>
+  
+  <span style="color:#75715e">&lt;!-- if-then-else form --&gt;</span>
+  <span style="color:#f92672">&lt;if</span> <span style="color:#a6e22e">condition=</span><span style="color:#e6db74">&#34;some conditional expression&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;then&gt;</span>
+      ...
+    <span style="color:#f92672">&lt;/then&gt;</span>
+    <span style="color:#f92672">&lt;else&gt;</span>
+      ...
+    <span style="color:#f92672">&lt;/else&gt;</span>    
+  <span style="color:#f92672">&lt;/if&gt;</span>
+</code></pre></div><p>示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration</span> <span style="color:#a6e22e">debug=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
+
+  <span style="color:#f92672">&lt;if</span> <span style="color:#a6e22e">condition=</span><span style="color:#e6db74">&#39;property(&#34;HOSTNAME&#34;).contains(&#34;torino&#34;)&#39;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;then&gt;</span>
+      <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;CON&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+        <span style="color:#f92672">&lt;encoder&gt;</span>
+          <span style="color:#f92672">&lt;pattern&gt;</span>%d %-5level %logger{35} - %msg %n<span style="color:#f92672">&lt;/pattern&gt;</span>
+        <span style="color:#f92672">&lt;/encoder&gt;</span>
+      <span style="color:#f92672">&lt;/appender&gt;</span>
+      <span style="color:#f92672">&lt;root&gt;</span>
+        <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;CON&#34;</span> <span style="color:#f92672">/&gt;</span>
+      <span style="color:#f92672">&lt;/root&gt;</span>
+    <span style="color:#f92672">&lt;/then&gt;</span>
+  <span style="color:#f92672">&lt;/if&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>${randomOutputDir}/conditional.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%d %-5level %logger{35} - %msg %n<span style="color:#f92672">&lt;/pattern&gt;</span>
+   <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;ERROR&#34;</span><span style="color:#f92672">&gt;</span>
+     <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h4 id="从jndi-获取变量">从JNDI 获取变量</h4>
+<p>使用 <!-- raw HTML omitted --> 可以从 JNDI 加载变量，如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;insertFromJNDI</span> <span style="color:#a6e22e">env-entry-name=</span><span style="color:#e6db74">&#34;java:comp/env/appName&#34;</span> <span style="color:#a6e22e">as=</span><span style="color:#e6db74">&#34;appName&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;contextName&gt;</span>${appName}<span style="color:#f92672">&lt;/contextName&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;CONSOLE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%d ${CONTEXT_NAME} %level %msg %logger{50}%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;CONSOLE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h4 id="文件包含">文件包含</h4>
+<p>可以使用 ≶include&gt; 标签在一个配置文件中包含另外一个配置文件，如下图所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;include</span> <span style="color:#a6e22e">file=</span><span style="color:#e6db74">&#34;src/main/java/chapters/configuration/includedConfig.xml&#34;</span><span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;includedConsole&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>被包含的文件必须有以下格式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;included&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;includedConsole&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>&#34;%d - %m%n&#34;<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+<span style="color:#f92672">&lt;/included&gt;</span>
+</code></pre></div><p>支持从多种源头包含
+从文件中包含</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;include</span> <span style="color:#a6e22e">file=</span><span style="color:#e6db74">&#34;src/main/java/chapters/configuration/includedConfig.xml&#34;</span><span style="color:#f92672">/&gt;</span>
+</code></pre></div><p>从 classpath 中包含</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;include</span> <span style="color:#a6e22e">resource=</span><span style="color:#e6db74">&#34;includedConfig.xml&#34;</span><span style="color:#f92672">/&gt;</span>
+</code></pre></div><p>从 URL 中包含</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;include</span> <span style="color:#a6e22e">url=</span><span style="color:#e6db74">&#34;http://some.host.com/includedConfig.xml&#34;</span><span style="color:#f92672">/&gt;</span>
+</code></pre></div><p>如果包含不成功，那么 logback 会打印出一条警告信息，如果不希望 logback 抱怨，只需这样做：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;include</span> <span style="color:#a6e22e">optional=</span><span style="color:#e6db74">&#34;true&#34;</span> <span style="color:#960050;background-color:#1e0010">....</span><span style="color:#f92672">/&gt;</span>
+</code></pre></div><h3 id="添加一个-context-listener">添加一个 Context Listener</h3>
+<p><code>LoggerContextListener</code> 接口的实例能监听 logger context 上发生的事件，比如说日志级别的变化，添加的方式如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration</span> <span style="color:#a6e22e">debug=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#f92672">&lt;contextListener</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.classic.jul.LevelChangePropagator&#34;</span><span style="color:#f92672">/&gt;</span>
+  .... 
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h1 id="appender-概念">Appender 概念</h1>
+<p>当一个记录日志的事件被发起时，logback 会将这个事件发送给 appender。appender 必须实现 <code>ch.qos.logback.core.Appender</code> 接口。</p>
+<p>这个接口的最重要的方法如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> ch.qos.logback.core<span style="color:#f92672">;</span>
+  
+<span style="color:#f92672">import</span> ch.qos.logback.core.spi.ContextAware<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.spi.FilterAttachable<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.spi.LifeCycle<span style="color:#f92672">;</span>
+  
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">Appender</span><span style="color:#f92672">&lt;</span>E<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> LifeCycle<span style="color:#f92672">,</span> ContextAware<span style="color:#f92672">,</span> FilterAttachable <span style="color:#f92672">{</span>
+
+  <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getName</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setName</span><span style="color:#f92672">(</span>String name<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doAppend</span><span style="color:#f92672">(</span>E event<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>这个接口的大多数方法都是 setter 和 getter，doAppend 方式是最重要的一个。这个类接收了一个泛型类型 E，在 logback-classic 模块里， E 的类型是 ILoggingEvent，在 logback-access 模块里，E 的类型是 AccessEvent。这个接口也继承了 FilterAttachable 接口，意味着可以为这个 appender 关联一个或者多个过滤器。appender 最终会根据 layout 或者 encoder 将日志信息格式化，并且只能关联一个 layout 或者 encoder，不过有一些 appender 已经有了内嵌的 layout 或者 encoder，比如说 SocketAppender。</p>
+<h1 id="appenderbase-源码分析">AppenderBase 源码分析</h1>
+<p><code> ch.qos.logback.core.AppenderBase</code> 这个类是一个抽象类，是其它具体 appender 的父类。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doAppend</span><span style="color:#f92672">(</span>E eventObject<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+
+  <span style="color:#75715e">// prevent re-entry.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>guard<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+    guard <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span><span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">started</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>statusRepeatCount<span style="color:#f92672">++</span> <span style="color:#f92672">&lt;</span> ALLOWED_REPEATS<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        addStatus<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> WarnStatus<span style="color:#f92672">(</span>
+            <span style="color:#e6db74">&#34;Attempted to append to non started appender [&#34;</span> <span style="color:#f92672">+</span> name <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;].&#34;</span><span style="color:#f92672">,</span><span style="color:#66d9ef">this</span><span style="color:#f92672">));</span>
+      <span style="color:#f92672">}</span>
+      <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>getFilterChainDecision<span style="color:#f92672">(</span>eventObject<span style="color:#f92672">)</span> <span style="color:#f92672">==</span> FilterReply<span style="color:#f92672">.</span><span style="color:#a6e22e">DENY</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+    
+    <span style="color:#75715e">// ok, we now invoke the derived class&#39;s implementation of append
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">append</span><span style="color:#f92672">(</span>eventObject<span style="color:#f92672">);</span>
+
+  <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+    guard <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>首先 doAppend 方法是 synchronized，保证了多线程访问这个 appender 时能起到互斥的作用，logback 也有非互斥的实现，<code> ch.qos.logback.core.UnsynchronizedAppenderBase</code>。
+guard 变量的作用是防止同一个线程内递归调用 doAppend 方法，造成死循环从而导致栈溢出。</p>
+<h1 id="logback-core-模块">logback-core 模块</h1>
+<p>logback-core 模块是其它模块的基础设施，以下将讨论几个 logback 自带的 appender。</p>
+<h2 id="outputstreamappender">OutputStreamAppender</h2>
+<p><code>OutputStreamAppender</code> 将日志记录到一个 <code>java.io.OutputStream</code> 里，这个 appender 是其它 appender 的基础，不能直接在 logback 配置文件里面把它进行配置然后拉出来用。但这并不意味着它没有可配置的属性。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>encoder</td>
+<td>Encoder</td>
+<td>日志格式</td>
+</tr>
+<tr>
+<td>immediateFlush</td>
+<td>boolean</td>
+<td>默认值是 true，意味着日志信息直接刷到目的地，不会做缓存。如果该值设置为 false，并且没有关闭 appender，那么一部分日志信息将会丢失</td>
+</tr>
+</tbody>
+</table>
+<p><code>OutputStreamAppender</code> 的类继承体系如下图所示：
+<figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/logback-usage/hierachy.jpg" alt="继承体系" class="lazyload"><figcaption class="image-caption">继承体系</figcaption></figure></p>
+<h2 id="consoleappender">ConsoleAppender</h2>
+<p><code>ConsoleAppender</code> 将日志信息输出到控制台，既可以是 System.out，也可以是 System.err。默认是前者。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>encoder</td>
+<td>Encoder</td>
+<td>日志格式</td>
+</tr>
+<tr>
+<td>target</td>
+<td>String</td>
+<td>要么填System.out，要么填System.err，默认是前者。</td>
+</tr>
+<tr>
+<td>withJansi</td>
+<td>boolean</td>
+<td>默认值是 false，主要作用是为代码着色，如果是 windows 平台，设置为 true 的同时还要在 classpath 中加入 &ldquo;org.fusesource.jansi:jansi:1.9&rdquo;，Unix 类系统本身支持因此不用。如果想在 Eclipse 里面用，还要使用这个插件：ANSI in Eclipse Console</td>
+</tr>
+</tbody>
+</table>
+<p>配置示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#75715e">&lt;!-- encoders are assigned the type
+</span><span style="color:#75715e">         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default --&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%-4relative [%thread] %-5level %logger{35} - %msg %n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h2 id="fileappender">FileAppender</h2>
+<p>把日志信息记录到文件里。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>append</td>
+<td>boolean</td>
+<td>如果目标文件已存在，要么追加到文件尾部，要么直接清空文件，默认是 true</td>
+</tr>
+<tr>
+<td>encoder</td>
+<td>Encoder</td>
+<td>日志格式</td>
+</tr>
+<tr>
+<td>file</td>
+<td>String</td>
+<td>文件名，如果文件不存在，则重新创建，如果父目录不存在，也会重新创建，注意在 windows 下，这种写法 c:\temp\test.log 会有问题，因为 \t 会被转义，正确的写法是：c:/temp/test.log 或者 c:\\temp\\test.log</td>
+</tr>
+<tr>
+<td>prudent</td>
+<td>boolean</td>
+<td>允许多个进程向同一个日志文件里写日志，但由于锁竞争，性能消耗大概是普通日志记录的三倍左右</td>
+</tr>
+</tbody>
+</table>
+<p>默认情况下，<strong>Immediate Flush</strong> 为true，为了不丢失日志。但是也可以将其设置为 false。
+配置示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>testFile.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;append&gt;</span>true<span style="color:#f92672">&lt;/append&gt;</span>
+    <span style="color:#75715e">&lt;!-- set immediateFlush to false for much higher logging throughput --&gt;</span>
+    <span style="color:#f92672">&lt;immediateFlush&gt;</span>true<span style="color:#f92672">&lt;/immediateFlush&gt;</span>
+    <span style="color:#75715e">&lt;!-- encoders are assigned the type
+</span><span style="color:#75715e">         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default --&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%-4relative [%thread] %-5level %logger{35} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+        
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>如果希望为日志加一个时间戳，则可以通过下面的方式来配置：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+
+  <span style="color:#75715e">&lt;!-- Insert the current time formatted as &#34;yyyyMMdd&#39;T&#39;HHmmss&#34; under
+</span><span style="color:#75715e">       the key &#34;bySecond&#34; into the logger context. This value will be
+</span><span style="color:#75715e">       available to all subsequent configuration elements. --&gt;</span>
+  <span style="color:#f92672">&lt;timestamp</span> <span style="color:#a6e22e">key=</span><span style="color:#e6db74">&#34;bySecond&#34;</span> <span style="color:#a6e22e">datePattern=</span><span style="color:#e6db74">&#34;yyyyMMdd&#39;T&#39;HHmmss&#34;</span><span style="color:#f92672">/&gt;</span>
+
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.FileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#75715e">&lt;!-- use the previously created timestamp to create a uniquely
+</span><span style="color:#75715e">         named log file --&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>log-${bySecond}.txt<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%logger{35} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p><!-- raw HTML omitted -->标签有两个必要的属性，分别是 name 和 datePattern，还有一个可选的属性 timeReference，name 所指定的可以用来作为变量使用，dataPattern 的格式与 SimpleDateFormat 的格式一样，而 timeReference 默认是配置文件被解析的时间，也可以显式指定为 contextBirth，这样时间就是上下文被创建的时间。
+如下例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;timestamp</span> <span style="color:#a6e22e">key=</span><span style="color:#e6db74">&#34;bySecond&#34;</span> <span style="color:#a6e22e">datePattern=</span><span style="color:#e6db74">&#34;yyyyMMdd&#39;T&#39;HHmmss&#34;</span> 
+             <span style="color:#a6e22e">timeReference=</span><span style="color:#e6db74">&#34;contextBirth&#34;</span><span style="color:#f92672">/&gt;</span>
+  ...
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h2 id="rollingfileappender">RollingFileAppender</h2>
+<p><code>RollingFileAppender</code> 既可以记录日志到文件，也可以在某个条件到达后，转移到另外一个文件。有两个子组件，分别是 RollingPolicy 和 TriggeringPolicy，分别描述了如何滚动，以及何时滚动。
+属性：</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>file</td>
+<td>String</td>
+<td>见 FileAppender</td>
+</tr>
+<tr>
+<td>append</td>
+<td>boolean</td>
+<td>见 FileAppender</td>
+</tr>
+<tr>
+<td>encoder</td>
+<td>Encoder</td>
+<td>日志格式</td>
+</tr>
+<tr>
+<td>rollingPolicy</td>
+<td>RollingPolicy</td>
+<td>如何滚动</td>
+</tr>
+<tr>
+<td>triggeringPolicy</td>
+<td>TriggeringPolicy</td>
+<td>何时滚动</td>
+</tr>
+<tr>
+<td>prudent</td>
+<td>boolean</td>
+<td>FixedWindowRollingPolicy 不支持 prudent 模式。TimeBasedRollingPolicy 支持 prudent 模式，不过有两个限制。在 prudent 模式下，无法进行文件压缩，file 属性必须留白，不能填写。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="滚动策略">滚动策略</h3>
+<p>RollingPolicy 主要负责文件的移动和重命名</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> ch.qos.logback.core.rolling<span style="color:#f92672">;</span>  
+
+<span style="color:#f92672">import</span> ch.qos.logback.core.FileAppender<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> ch.qos.logback.core.spi.LifeCycle<span style="color:#f92672">;</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">RollingPolicy</span> <span style="color:#66d9ef">extends</span> LifeCycle <span style="color:#f92672">{</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">rollover</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> RolloverFailure<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getActiveFileName</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">public</span> CompressionMode <span style="color:#a6e22e">getCompressionMode</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setParent</span><span style="color:#f92672">(</span>FileAppender appender<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="timebasedrollingpolicy">TimeBasedRollingPolicy</h3>
+<p>这个策略基于时间，比如说基于 day 或者 month 的滚动，<strong>同时实现了 RollingPolicy 接口和 TriggeringPolicy 接口</strong>，既定义了如何滚动，也定义了何时滚动。
+<code>TimeBasedRollingPolicy</code> 只有一个必须的属性 fileNamePattern 和几个可选的属性。</p>
+<p>fileNamePattern 包含实际的文件名，以及一个 %d 标识，这个标识的用法是 %d{}，其中大括号里面是遵循 <code>java.text.SimpleDataFormat</code> 格式的日期模式，logback 会根据这个日期模式的最小单位来推断出是根据天、月、年还是分钟、小时来进行滚动的。
+RollingFileAppender 有一个 file 属性，在配合 TimeBasedRollingPolicy 使用的时候，这个 file 的属性是否被设置，有着不同的区别。如果 file 属性设置了，那么每次新记录的日志将会记录到这个文件，当滚动时需要重命名的时候，则将这个文件名以 fileNamePattern 指定的模式进行重命名和归档。如果 file 属性没有进行设置，那么每次新纪录的日志会记录到根据 fileNamePattern 指定的当前日志文件里。
+如果有多个 %d 标识，那么必须有一个是 primary 的，其它的为 auxiliary 的。例如 <code>/var/log/%d{yyyy/MM, aux}/myapplication.%d{yyyy-MM-dd}.log</code> 。同时，fileNamePattern 支持填写 Time Zone，例如 <code>aFolder/test.%d{yyyy-MM-dd-HH, UTC}.log</code>。</p>
+<p>maxHistory 属性指定要保留多长时间的日志，依据从 fileNamePattern 中推断出来的单位。</p>
+<p>totalSizeGap 属性限制了日志文件的大小总共不能超过的大小。</p>
+<p>cleanHistoryOnStart 指定了是否重启应用的时候删除之前的归档日志。</p>
+<p>以下是一些常见的 fileNamePattern，以及它们的作用。</p>
+<table>
+<thead>
+<tr>
+<th>fileNamePattern</th>
+<th>Rollover schedule</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/wombat/foo.%d</td>
+<td>Daily rollover (at midnight). Due to the omission of the optional time and date pattern for the %d token specifier, the default pattern of yyyy-MM-dd is assumed, which corresponds to daily rollover.</td>
+<td><strong>If the file property not set</strong>: During November 23rd, 2006, logging output will go to the file /wombat/foo.2006-11-23. At midnight and for the rest of the 24th, logging output will be directed to /wombat/foo.2006-11-24. <strong>If the file property set to /wombat/foo.txt</strong>: During November 23rd, 2006, logging output will go to the file /wombat/foo.txt. At midnight, foo.txt will be renamed as /wombat/foo.2006-11-23. A new /wombat/foo.txt file will be created and for the rest of November 24th logging output will be directed to foo.txt.</td>
+</tr>
+<tr>
+<td>/wombat/%d{yyyy/MM}/foo.txt</td>
+<td>Rollover at the beginning of each month.</td>
+<td>**If the file property not set:**During the month of October 2006, logging output will go to /wombat/2006/10/foo.txt. After midnight of October 31st and for the rest of November, logging output will be directed to /wombat/2006/11/foo.txt. ** If the file property set to /wombat/foo.txt:**The active log file will always be /wombat/foo.txt. During the month of October 2006, logging output will go to /wombat/foo.txt. At midnight of October 31st, /wombat/foo.txt will be renamed as /wombat/2006/10/foo.txt. A new /wombat/foo.txt file will be created where logging output will go for the rest of November. At midnight of November 30th, /wombat/foo.txt will be renamed as /wombat/2006/11/foo.txt and so on.</td>
+</tr>
+<tr>
+<td>/wombat/foo.%d{yyyy-ww}.log</td>
+<td>Rollover at the first day of each week. Note that the first day of the week depends on the locale.</td>
+<td>Similar to previous cases, except that rollover will occur at the beginning of every new week.</td>
+</tr>
+<tr>
+<td>/wombat/foo%d{yyyy-MM-dd_HH}.log</td>
+<td>Rollover at the top of each hour.</td>
+<td>Similar to previous cases, except that rollover will occur at the top of every hour.</td>
+</tr>
+<tr>
+<td>/wombat/foo%d{yyyy-MM-dd_HH-mm}.log</td>
+<td>Rollover at the beginning of every minute.</td>
+<td>Similar to previous cases, except that rollover will occur at the beginning of every minute.</td>
+</tr>
+<tr>
+<td>/wombat/foo%d{yyyy-MM-dd_HH-mm, UTC}.log</td>
+<td>Rollover at the beginning of every minute.</td>
+<td>Similar to previous cases, except that file names will be expressed in UTC.</td>
+</tr>
+<tr>
+<td>/foo/%d{yyyy-MM,aux}/%d.log</td>
+<td>Rollover daily. Archives located under a folder containing year and month.</td>
+<td>In this example, the first %d token is marked as auxiliary. The second %d token, with time and date pattern omitted, is then assumed to be primary. Thus, rollover will occur daily (default for %d) and the folder name will depend on the year and month. For example, during the month of November 2006, archived files will all placed under the /foo/2006-11/ folder, e.g /foo/2006-11/2006-11-14.log.</td>
+</tr>
+<tr>
+<td>/wombat/foo.%d.gz</td>
+<td>Daily rollover (at midnight) with automatic GZIP compression of the archived files.</td>
+<td>** If the file property not set:** During November 23rd, 2009, logging output will go to the file /wombat/foo.2009-11-23. However, at midnight that file will be compressed to become /wombat/foo.2009-11-23.gz. For the 24th of November, logging output will be directed to /wombat/folder/foo.2009-11-24 until it&rsquo;s rolled over at the beginning of the next day. **If the file property set to /wombat/foo.txt:** During November 23rd, 2009, logging output will go to the file /wombat/foo.txt. At midnight that file will be compressed and renamed as /wombat/foo.2009-11-23.gz. A new /wombat/foo.txt file will be created where logging output will go for the rest of November 24rd. At midnight November 24th, /wombat/foo.txt will be compressed and renamed as /wombat/foo.2009-11-24.gz and so on.</td>
+</tr>
+</tbody>
+</table>
+<p>配置示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.RollingFileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>logFile.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;rollingPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.TimeBasedRollingPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#75715e">&lt;!-- daily rollover --&gt;</span>
+      <span style="color:#f92672">&lt;fileNamePattern&gt;</span>logFile.%d{yyyy-MM-dd}.log<span style="color:#f92672">&lt;/fileNamePattern&gt;</span>
+
+      <span style="color:#75715e">&lt;!-- keep 30 days&#39; worth of history capped at 3GB total size --&gt;</span>
+      <span style="color:#f92672">&lt;maxHistory&gt;</span>30<span style="color:#f92672">&lt;/maxHistory&gt;</span>
+      <span style="color:#f92672">&lt;totalSizeCap&gt;</span>3GB<span style="color:#f92672">&lt;/totalSizeCap&gt;</span>
+
+    <span style="color:#f92672">&lt;/rollingPolicy&gt;</span>
+
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%-4relative [%thread] %-5level %logger{35} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span> 
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><h3 id="sizeandtimebasedrollingpolicy">SizeAndTimeBasedRollingPolicy</h3>
+<p>这个策略除了具有 TimeBasedRollingPolicy 的功能外，还能限制单个日志文件的大小，当单个日志到达指定的大小时，触发日志滚动。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;ROLLING&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.RollingFileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>mylog.txt<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;rollingPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#75715e">&lt;!-- rollover daily --&gt;</span>
+      <span style="color:#f92672">&lt;fileNamePattern&gt;</span>mylog-%d{yyyy-MM-dd}.%i.txt<span style="color:#f92672">&lt;/fileNamePattern&gt;</span>
+       <span style="color:#75715e">&lt;!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB --&gt;</span>
+       <span style="color:#f92672">&lt;maxFileSize&gt;</span>100MB<span style="color:#f92672">&lt;/maxFileSize&gt;</span>    
+       <span style="color:#f92672">&lt;maxHistory&gt;</span>60<span style="color:#f92672">&lt;/maxHistory&gt;</span>
+       <span style="color:#f92672">&lt;totalSizeCap&gt;</span>20GB<span style="color:#f92672">&lt;/totalSizeCap&gt;</span>
+    <span style="color:#f92672">&lt;/rollingPolicy&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+
+
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;ROLLING&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>通过 maxFileSize 来设置单个日志文件的大小限制。注意到这里，有一个新的标识出现 %i，这是当发生滚动时，可以为同一天的日志加上不同的后缀 index。</p>
+<h3 id="fixedwindowrollingpolicy">FixedWindowRollingPolicy</h3>
+<p>配置示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.RollingFileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>test.log<span style="color:#f92672">&lt;/file&gt;</span>
+
+    <span style="color:#f92672">&lt;rollingPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.FixedWindowRollingPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;fileNamePattern&gt;</span>foo%i.log<span style="color:#f92672">&lt;/fileNamePattern&gt;</span>
+      <span style="color:#f92672">&lt;minIndex&gt;</span>1<span style="color:#f92672">&lt;/minIndex&gt;</span>
+      <span style="color:#f92672">&lt;maxIndex&gt;</span>3<span style="color:#f92672">&lt;/maxIndex&gt;</span>
+    <span style="color:#f92672">&lt;/rollingPolicy&gt;</span>
+
+    <span style="color:#f92672">&lt;triggeringPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;maxFileSize&gt;</span>5MB<span style="color:#f92672">&lt;/maxFileSize&gt;</span>
+    <span style="color:#f92672">&lt;/triggeringPolicy&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%-4relative [%thread] %-5level %logger{35} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+        
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div><p>以一个例子来认识 FixedWindowRollingPolicy</p>
+<table>
+<thead>
+<tr>
+<th>Number of rollovers</th>
+<th>Active output target</th>
+<th>Active log files</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>foo.log</td>
+<td>-</td>
+<td>No rollover has happened yet, logback logs into the initial file.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>foo.log</td>
+<td>foo1.log</td>
+<td>First rollover. foo.log is renamed as foo1.log. A new foo.log file is created and becomes the active output target.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>foo.log</td>
+<td>foo1.log,foo2.log</td>
+<td>Second rollover. foo1.log is renamed as foo2.log. foo.log is renamed as foo1.log. A new foo.log file is created and becomes the active output target.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>foo.log</td>
+<td>foo1.log, foo2.log, foo3.log</td>
+<td>Third rollover. foo2.log is renamed as foo3.log. foo1.log is renamed as foo2.log. foo.log is renamed as foo1.log. A new foo.log file is created and becomes the active output target.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>foo.log</td>
+<td>foo1.log, foo2.log, foo3.log</td>
+<td>In this and subsequent rounds, the rollover begins by deleting foo3.log. Other files are renamed by incrementing their index as shown in previous steps. In this and subsequent rollovers, there will be three archive logs and one active log file.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sizebasedtriggeringpolicy">SizeBasedTriggeringPolicy</h3>
+<p>配置示例，一般配合 FixedWindowRollingPolicy：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.RollingFileAppender&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;file&gt;</span>test.log<span style="color:#f92672">&lt;/file&gt;</span>
+    <span style="color:#f92672">&lt;rollingPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.FixedWindowRollingPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;fileNamePattern&gt;</span>test.%i.log.zip<span style="color:#f92672">&lt;/fileNamePattern&gt;</span>
+      <span style="color:#f92672">&lt;minIndex&gt;</span>1<span style="color:#f92672">&lt;/minIndex&gt;</span>
+      <span style="color:#f92672">&lt;maxIndex&gt;</span>3<span style="color:#f92672">&lt;/maxIndex&gt;</span>
+    <span style="color:#f92672">&lt;/rollingPolicy&gt;</span>
+
+    <span style="color:#f92672">&lt;triggeringPolicy</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;maxFileSize&gt;</span>5MB<span style="color:#f92672">&lt;/maxFileSize&gt;</span>
+    <span style="color:#f92672">&lt;/triggeringPolicy&gt;</span>
+    <span style="color:#f92672">&lt;encoder&gt;</span>
+      <span style="color:#f92672">&lt;pattern&gt;</span>%-4relative [%thread] %-5level %logger{35} - %msg%n<span style="color:#f92672">&lt;/pattern&gt;</span>
+    <span style="color:#f92672">&lt;/encoder&gt;</span>
+  <span style="color:#f92672">&lt;/appender&gt;</span>
+        
+  <span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;DEBUG&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;FILE&#34;</span> <span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;/root&gt;</span>
+<span style="color:#f92672">&lt;/configuration&gt;</span>
+</code></pre></div>
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>2998</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2flogback-usage%2f&amp;appkey=&amp;title=Logback%20%e4%bd%bf%e7%94%a8%e8%af%a6%e8%a7%a3" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/jdbc4.2-spec-11/" class="prev" rel="prev" title="JDBC4.2规范-第十一章 连接池"><i class="iconfont icon-dajiantou"></i>&nbsp;JDBC4.2规范-第十一章 连接池</a>
+         
+        
+        <a href="/2017/java-trouble-shooting/" class="next" rel="next" title="Java Trouble Shooting">Java Trouble Shooting&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-02-10 19:35:24 \u002b0800 CST',
+              title: 'Logback 使用详解',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
