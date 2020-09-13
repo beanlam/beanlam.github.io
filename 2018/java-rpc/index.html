@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2018/java-monitor/" />
+  <link rel="next" href="/2019/master-interview-pick-1/" />
+  <link rel="canonical" href="/2018/java-rpc/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           Java 简易RPC框架 | beanlam
+       
+  </title>
+  <meta name="title" content="Java 简易RPC框架 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Java 简易RPC框架"/>
+<meta name="twitter:description" content="需求分析 RPC 全称 Remote Procedure Call ，简单地来说，它能让使用者像调用本地方法一样，调用远程的接口，而不需要关注底层的具体细节。 例如车辆违章代办功能，如果车辆因为某种原因违章，只需要通过这个违章代办功能（它也许是个APP），我们就能动动手指，而省去了一些跑腿的工作。
+不像微服务背景下大家所说的 RPC 框架，如 Dubbo 之类。这个 RPC 框架不提供过多的关于服务注册、服务发现、服务管理等功能。它针对的是这样的一些场景：在内部网络，或者局域网内，两个属于同个业务的系统之间需要通信，而我们又觉得去设计多一种二进制网络协议过于繁琐并且没有必要，这时候如果给客户端开发者一些明确的接口，让他知道实现什么功能该调用什么接口，那么省去的工作量以及开发效率上的提升不言而喻。
+这个 RPC 系统基于 Java 语言实现，需求如下：
+ RPC 服务端可以通过一条长连接发布多个接口（Interface），客户端按需生成对应接口的代理。 RPC 客户端也可以发布接口，以便在必要的时候，服务端可以主动调用客户端的接口实现 客户端与服务端之间保持长连接并且维持心跳 服务端针对不同的接口实现，可以指定不同的线程池去处理 序列化协议支持扩展 通信协议与具体编程语言无关 支持并发调用，一个RPC客户端实例要求是线程安全的  通信协议设计 高效的通信协议一般是二进制格式的，比较常见的还有文本协议比如说HTTP，为了追求效率，这个 RPC 框架就采用二进制格式。
+协议的基本要素 魔数 要了解到，报文是在网络上传输的，安全性比较低，因此有必要采取一些措施使得并不是任何人都可以随随便便往我们的端口上发东西，因此我们对报文要有一个初步的识别功能，这时候“魔数(magic number)”就派上用场了。魔数并不受任何规范约束，没有人可以要求你的魔数应该遵循什么规范，实际上魔数只是我们通信双方都约定的一个“暗号”，不知道这个暗号的人就无法参与进通信中。例如 Java 源文件编译后的 class 文件开头就有一个魔数：0xCAFEBABE，随随便便打开一个class文件用十六进制编辑器查看，就能看到。
+Java 虚拟机加载 class 的时候会先验证魔数。如果不是 CAFEBABE 就认为是不合法的 class 文件，并拒绝加载。 不过魔数起到的安全防范作用是非常有限的，“有心人”可以通过抓取网络包就识别出魔数了。因此魔数这个东西其实是“防君子不防小人”。
+协议版本 一个协议可能也会有多个版本，例如说 HTTP1.0 和 HTTP1.1，不同版本的协议元素可能发生了改变，解析方式也会发生改变，因此协议设计这一块，需要预留出地方声明协议的版本，通信双方在解析协议或者拼装协议的时候才有迹可循。
+报文类型 对于RPC框架来说，报文可能有多种类型：心跳类型报文、认证类型报文、请求类型报文、响应类型报文等。
+上下文 ID RPC 调用其实是一个“请求-响应”的过程，并且跨物理机器，因此每次请求和响应，都必须带上上下文 ID，通信双方才能把请求和响应对应起来。
+状态 状态用来标识一次调用时正常结束还是异常结束，通常由被调用方置状态。
+请求数据 即发送到服务端的调用请求，通常是序列化后的二进制流，长度不定。
+长度编码字段 收报文的一方怎么知道发报文的那一方发了多少字节呢？因此发送方必须在协议里告诉接收方需要接受多少字节才算一个完整的报文。"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Java 简易RPC框架",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2018\/java-rpc\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  1141 ,
+  "url": "\/2018\/java-rpc\/",
+  "datePublished": "2018-11-06T23:08:41\u002b08:00",
+  "dateModified": "2018-11-06T23:08:41\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">Java 简易RPC框架</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2018-11-06 >6 November 2018</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/java/"> java </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                6 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="需求分析">需求分析</h1>
+<p>RPC 全称 Remote Procedure Call ，简单地来说，它能让使用者像调用本地方法一样，调用远程的接口，而不需要关注底层的具体细节。
+例如车辆违章代办功能，如果车辆因为某种原因违章，只需要通过这个违章代办功能（它也许是个APP），我们就能动动手指，而省去了一些跑腿的工作。</p>
+<p>不像微服务背景下大家所说的 RPC 框架，如 Dubbo 之类。这个 RPC 框架不提供过多的关于服务注册、服务发现、服务管理等功能。它针对的是这样的一些场景：在内部网络，或者局域网内，两个属于同个业务的系统之间需要通信，而我们又觉得去设计多一种二进制网络协议过于繁琐并且没有必要，这时候如果给客户端开发者一些明确的接口，让他知道实现什么功能该调用什么接口，那么省去的工作量以及开发效率上的提升不言而喻。</p>
+<p>这个 RPC 系统基于 Java 语言实现，需求如下：</p>
+<ul>
+<li>RPC 服务端可以通过一条长连接发布多个接口（Interface），客户端按需生成对应接口的代理。</li>
+<li>RPC 客户端也可以发布接口，以便在必要的时候，服务端可以主动调用客户端的接口实现</li>
+<li>客户端与服务端之间保持长连接并且维持心跳</li>
+<li>服务端针对不同的接口实现，可以指定不同的线程池去处理</li>
+<li>序列化协议支持扩展</li>
+<li>通信协议与具体编程语言无关</li>
+<li>支持并发调用，一个RPC客户端实例要求是线程安全的</li>
+</ul>
+<h1 id="通信协议设计">通信协议设计</h1>
+<p>高效的通信协议一般是二进制格式的，比较常见的还有文本协议比如说HTTP，为了追求效率，这个 RPC 框架就采用二进制格式。</p>
+<h2 id="协议的基本要素">协议的基本要素</h2>
+<h3 id="魔数">魔数</h3>
+<p>要了解到，报文是在网络上传输的，安全性比较低，因此有必要采取一些措施使得并不是任何人都可以随随便便往我们的端口上发东西，因此我们对报文要有一个初步的识别功能，这时候“魔数(magic number)”就派上用场了。魔数并不受任何规范约束，没有人可以要求你的魔数应该遵循什么规范，实际上魔数只是我们通信双方都约定的一个“暗号”，不知道这个暗号的人就无法参与进通信中。例如 Java 源文件编译后的 class 文件开头就有一个魔数：0xCAFEBABE，随随便便打开一个class文件用十六进制编辑器查看，就能看到。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/java-rpc/class.png" alt="class文件格式" class="lazyload"><figcaption class="image-caption">class文件格式</figcaption></figure></p>
+<p>Java 虚拟机加载 class 的时候会先验证魔数。如果不是 CAFEBABE 就认为是不合法的 class 文件，并拒绝加载。
+不过魔数起到的安全防范作用是非常有限的，“有心人”可以通过抓取网络包就识别出魔数了。因此魔数这个东西其实是“防君子不防小人”。</p>
+<h3 id="协议版本">协议版本</h3>
+<p>一个协议可能也会有多个版本，例如说 HTTP1.0 和 HTTP1.1，不同版本的协议元素可能发生了改变，解析方式也会发生改变，因此协议设计这一块，需要预留出地方声明协议的版本，通信双方在解析协议或者拼装协议的时候才有迹可循。</p>
+<h3 id="报文类型">报文类型</h3>
+<p>对于RPC框架来说，报文可能有多种类型：心跳类型报文、认证类型报文、请求类型报文、响应类型报文等。</p>
+<h3 id="上下文-id">上下文 ID</h3>
+<p>RPC 调用其实是一个“请求-响应”的过程，并且跨物理机器，因此每次请求和响应，都必须带上上下文 ID，通信双方才能把请求和响应对应起来。</p>
+<h3 id="状态">状态</h3>
+<p>状态用来标识一次调用时正常结束还是异常结束，通常由被调用方置状态。</p>
+<h3 id="请求数据">请求数据</h3>
+<p>即发送到服务端的调用请求，通常是序列化后的二进制流，长度不定。</p>
+<h3 id="长度编码字段">长度编码字段</h3>
+<p>收报文的一方怎么知道发报文的那一方发了多少字节呢？因此发送方必须在协议里告诉接收方需要接受多少字节才算一个完整的报文。</p>
+<h3 id="保留字段">保留字段</h3>
+<p>协议一旦被设计，并非一成不变的，日后可能有变动的可能，因此还需要考虑保留一些字节空间作为保留字段，以备日后协议的扩展。</p>
+<h2 id="协议设计">协议设计</h2>
+<p>结合以上的一些设计原则，具体协议设计如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"> ------------------------------------------------------------------------
+ | magic <span style="color:#f92672">(</span>2bytes<span style="color:#f92672">)</span> | version <span style="color:#f92672">(</span>1byte<span style="color:#f92672">)</span> |  type <span style="color:#f92672">(</span>1byte<span style="color:#f92672">)</span>  | reserved <span style="color:#f92672">(</span>7bits<span style="color:#f92672">)</span> | 
+ ------------------------------------------------------------------------
+ | status <span style="color:#f92672">(</span>1byte<span style="color:#f92672">)</span> |    id <span style="color:#f92672">(</span>8bytes<span style="color:#f92672">)</span>    |        body length <span style="color:#f92672">(</span>4bytes<span style="color:#f92672">)</span>     |
+ ------------------------------------------------------------------------
+ |                                                                      |
+ |                   body <span style="color:#f92672">(</span>$body_length bytes<span style="color:#f92672">)</span>                          |
+ |                                                                      |
+ ------------------------------------------------------------------------
+</code></pre></div><h1 id="链路可靠性">链路可靠性</h1>
+<p>客户端与服务端之间的连接采用 TCP 长连接，一个客户端与服务端之间保持至少一条长连接。接口调用请求的发送，在多条连接之间进行负载均衡。
+每条连接在空闲的时候，由客户端主动向服务端发送心跳报文，并且客户端在发现连接失效或断开的时候，自动进行重连。
+每个客户端向服务端建立连接后，在正式发起接口调用请求之前，都需要进行check in 操作, check in 操作主要是将客户端的身份标识(identifier)和客户端的心跳间隔告诉服务端。利用 netty 的 handler 责任链机制和自带的 IdleStateHandler，自动检测出连接是否空闲，并在空闲时触发心跳报文的发送。而服务端在客户端 checkin 后，根据客户端的心跳频率，在自己的 handler pipeline 上动态加入一个 IdleStateHandler，来检测出客户端是否已经失联，如果是，则主动关闭连接。
+同时，客户端本地将会起一个定时执行任务的线程，定期检查连接是否失效，如果失效，则关闭旧连接，并进行连接的重建。</p>
+<h1 id="编解码">编解码</h1>
+<p>协议的解码我们称为 decode，编码我们成为 encode，下文我们将直接使用 decode 和 encode 术语。</p>
+<p>decode 的本质就是讲接收到的一串二进制报文，转化为具体的消息对象，在 Java 中，就是将这串二进制报文所包含的信息，用某种类型的对象存储起来。
+encode 则是将存储了信息的对象，转化为具有相同含义的一串二进制报文，然后网络收发模块再将报文发出去。</p>
+<p>无论是 rpc 客户端还是服务端，都需要有一个 decode 和 encode 的逻辑。</p>
+<h1 id="消息类型">消息类型</h1>
+<p>rpc 客户端与服务端之间的通信，需要通过发送不同类型的消息来实现，例如：client 向 server 端发送的消息，可能是请求消息，可能是心跳消息，可能是认证消息，而 server 向 client 发送的消息，一般就是响应消息。
+利用 Java 中的枚举类型，可以将消息类型进行如下定义：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * 消息类型
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">enum</span> MessageType <span style="color:#f92672">{</span>
+
+    REQUEST<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x01<span style="color:#f92672">),</span> HEARTBEAT<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x02<span style="color:#f92672">),</span> CHECKIN<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x03<span style="color:#f92672">),</span> RESPONSE<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x04<span style="color:#f92672">),</span> UNKNOWN<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0xFF<span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">byte</span> code<span style="color:#f92672">;</span>
+
+    MessageType<span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">code</span> <span style="color:#f92672">=</span> code<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> MessageType <span style="color:#a6e22e">valueOf</span><span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span>MessageType instance <span style="color:#f92672">:</span> values<span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>instance<span style="color:#f92672">.</span><span style="color:#a6e22e">code</span> <span style="color:#f92672">==</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">return</span> instance<span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+        <span style="color:#66d9ef">return</span> UNKNOWN<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">byte</span> <span style="color:#a6e22e">getCode</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> code<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>在这个类中设计了 valueOf 方法，方便进行具体的 byte 字节与具体的消息枚举类型之间的映射和转换。</p>
+<h1 id="调用状态设计">调用状态设计</h1>
+<p>client 主动发起的一次 rpc 调用，要么成功，要么失败，server 端有责任告知 client 此次调用的结果，client 也有责任去感知调用失败的原因，因为不一定是 server 端造成的失败，可能是因为 client 端在对消息进行预处理的时候，例如序列化，就已经出错了，这种错误也应该作为一次调用的调用结果返回给 client 调用者。因此引入一个调用状态，与消息类型一样，它也借助了 Java 语言里的枚举类型来实现，并实现了方便的 valueOf 方法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * 调用状态
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">enum</span> InvocationStatus <span style="color:#f92672">{</span>
+
+    OK<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x01<span style="color:#f92672">),</span> CLIENT_TIMEOUT<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x02<span style="color:#f92672">),</span> SERVER_TIMEOUT<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x03<span style="color:#f92672">),</span> BAD_REQUEST<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x04<span style="color:#f92672">),</span> BAD_RESPONSE<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x05<span style="color:#f92672">),</span> SERVICE_NOT_FOUND<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x06<span style="color:#f92672">),</span> SERVER_SERIALIZATION_ERROR<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x07<span style="color:#f92672">),</span> CLIENT_SERIALIZATION_ERROR<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x08<span style="color:#f92672">),</span> CLIENT_CANCELED<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x09<span style="color:#f92672">),</span> SERVER_BUSY<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x0A<span style="color:#f92672">),</span> CLIENT_BUSY<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x0B<span style="color:#f92672">),</span> SERIALIZATION_ERROR<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x0C<span style="color:#f92672">),</span> INTERNAL_ERROR<span style="color:#f92672">(</span>
+            <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x0D<span style="color:#f92672">),</span> SERVER_METHOD_INVOKE_ERROR<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0x0E<span style="color:#f92672">),</span> UNKNOWN<span style="color:#f92672">((</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">)</span> 0xFF<span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">byte</span> code<span style="color:#f92672">;</span>
+
+    InvocationStatus<span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">code</span> <span style="color:#f92672">=</span> code<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> InvocationStatus <span style="color:#a6e22e">valueOf</span><span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span>InvocationStatus instance <span style="color:#f92672">:</span> values<span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>code <span style="color:#f92672">==</span> instance<span style="color:#f92672">.</span><span style="color:#a6e22e">code</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">return</span> instance<span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+
+        <span style="color:#66d9ef">return</span> UNKNOWN<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">byte</span> <span style="color:#a6e22e">getCode</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> code<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h1 id="消息实体设计">消息实体设计</h1>
+<p>我们将 client 往 server 端发送的统一称为 rpc 请求消息，一个请求对应着一个响应，因此在 client 和 server 端间流动的信息大体上其实就只有两种，即要么是请求，要么是响应。我们将会定义两个类，分别是 RpcRequest 和 RpcResponse 来代表请求消息和响应消息。
+另外由于无论是请求消息还是响应消息，它们都有一些共同的属性，例如说“调用上下文ID”，或者消息类型。因此会再定义一个 RpcMessage 类，作为父类。</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/java-rpc/relations.png" alt="消息类关系" class="lazyload"><figcaption class="image-caption">消息类关系</figcaption></figure></p>
+<h2 id="rpcmessage">RpcMessage</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * rpc消息
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RpcMessage</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> MessageType type<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">long</span> contextId<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">private</span> Object data<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">getContextId</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">contextId</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setContextId</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> id<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">contextId</span> <span style="color:#f92672">=</span> id<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> Object <span style="color:#a6e22e">getData</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">data</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setData</span><span style="color:#f92672">(</span>Object data<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">data</span> <span style="color:#f92672">=</span> data<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setType</span><span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> code<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">type</span> <span style="color:#f92672">=</span> MessageType<span style="color:#f92672">.</span><span style="color:#a6e22e">valueOf</span><span style="color:#f92672">(</span>code<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> MessageType <span style="color:#a6e22e">getType</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">type</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setType</span><span style="color:#f92672">(</span>MessageType type<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">type</span> <span style="color:#f92672">=</span> type<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">toString</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;[messageType=&#34;</span> <span style="color:#f92672">+</span> type<span style="color:#f92672">.</span><span style="color:#a6e22e">name</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;, contextId=&#34;</span> <span style="color:#f92672">+</span> contextId <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;, data=&#34;</span>
+                <span style="color:#f92672">+</span> data <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;]&#34;</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="rpcrequest">RpcRequest</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> java.util.concurrent.atomic.AtomicLong<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> * rpc请求消息
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RpcRequest</span> <span style="color:#66d9ef">extends</span> RpcMessage <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> AtomicLong ID_GENERATOR <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicLong<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">RpcRequest</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span>ID_GENERATOR<span style="color:#f92672">.</span><span style="color:#a6e22e">incrementAndGet</span><span style="color:#f92672">());</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">RpcRequest</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> contextId<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        setContextId<span style="color:#f92672">(</span>contextId<span style="color:#f92672">);</span>
+        setType<span style="color:#f92672">(</span>MessageType<span style="color:#f92672">.</span><span style="color:#a6e22e">REQUEST</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="rpcresponse">RpcResponse</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * rpc响应消息
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RpcResponse</span> <span style="color:#66d9ef">extends</span> RpcMessage <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> InvocationStatus status <span style="color:#f92672">=</span> InvocationStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">OK</span><span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">RpcResponse</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> contextId<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        setContextId<span style="color:#f92672">(</span>contextId<span style="color:#f92672">);</span>
+        setType<span style="color:#f92672">(</span>MessageType<span style="color:#f92672">.</span><span style="color:#a6e22e">RESPONSE</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> InvocationStatus <span style="color:#a6e22e">getStatus</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">status</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setStatus</span><span style="color:#f92672">(</span>InvocationStatus status<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">status</span> <span style="color:#f92672">=</span> status<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">toString</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;RpcResponse[contextId=&#34;</span> <span style="color:#f92672">+</span> getContextId<span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;, status=&#34;</span> <span style="color:#f92672">+</span> status<span style="color:#f92672">.</span><span style="color:#a6e22e">name</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;]&#34;</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h1 id="netty-编解码介绍">netty 编解码介绍</h1>
+<p>netty 是一个 NIO 框架，应该这么说，netty 是一个有良好设计思想的 NIO 框架。一个 NIO 框架必备的要素就是 reactor 线程模型，目前有一些比较优秀而且开源的小型 NIO 框架，例如分库分表中间件 mycat 实现的一个简易 NIO 框架，可以在<a href="https://github.com/MyCATApache/Mycat-NIO">这里</a>看到。</p>
+<p>netty 的主要特点有：微内核设计、责任链模式的业务逻辑处理、内存和资源泄露的检测等。其中编解码在 netty 中，都被设计成责任链上的一个一个 Handler。
+decode 对于 netty 来说，它提供了 ByteToMessageDecoder，它也提供了 MessageToByteEncoder。
+借助 netty 来实现协议编解码，实际上就是去在这两个handler里面实现编解码的逻辑。</p>
+<h1 id="decode">decode</h1>
+<p>在实现 decode 逻辑时需要注意的一个问题是，由于二进制报文是在网络上发送的，因此一个完整的报文可能经过多个分组来发送的，什么意思呢，就是当有报文进来后，要确认报文是否完整，decode逻辑代码不能假设收到的报文就是一个完整报文，一般称这为“TCP半包问题”。同样，报文是连着报文发送的，意味着decode代码逻辑还要负责在一长串二进制序列中，分割出一个一个独立的报文，这称之为“TCP粘包问题”。
+netty 本身有提供一些方便的 decoder handler 来处理 TCP 半包和粘包的问题。不过一般情况下我们不会直接去用它，因为我们的协议比较简单，自己在代码里处理一下就可以了。
+完整的 decode 代码逻辑如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> cn.com.agree.ats.rpc.message.*<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> cn.com.agree.ats.util.logfacade.AbstractPuppetLoggerFactory<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> cn.com.agree.ats.util.logfacade.IPuppetLogger<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.buffer.ByteBuf<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.channel.ChannelHandlerContext<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.handler.codec.ByteToMessageDecoder<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> java.util.List<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> * 协议解码器
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ProtocolDecoder</span> <span style="color:#66d9ef">extends</span> ByteToMessageDecoder <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> IPuppetLogger logger <span style="color:#f92672">=</span> AbstractPuppetLoggerFactory
+            <span style="color:#f92672">.</span><span style="color:#a6e22e">getInstance</span><span style="color:#f92672">(</span>ProtocolDecoder<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">boolean</span> magicChecked <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">decode</span><span style="color:#f92672">(</span>ChannelHandlerContext ctx<span style="color:#f92672">,</span> ByteBuf in<span style="color:#f92672">,</span> List<span style="color:#f92672">&lt;</span>Object<span style="color:#f92672">&gt;</span> list<span style="color:#f92672">)</span>
+            <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>magicChecked<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readableBytes</span><span style="color:#f92672">()</span> <span style="color:#f92672">&lt;</span> ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">MAGIC_LENGTH_IN_BYTES</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span>
+            magicChecked <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">getShort</span><span style="color:#f92672">(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readerIndex</span><span style="color:#f92672">())</span> <span style="color:#f92672">==</span> ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">MAGIC</span><span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+                logger<span style="color:#f92672">.</span><span style="color:#a6e22e">warn</span><span style="color:#f92672">(</span>
+                        <span style="color:#e6db74">&#34;illegal data received without correct magic number, channel will be close&#34;</span><span style="color:#f92672">);</span>
+                ctx<span style="color:#f92672">.</span><span style="color:#a6e22e">close</span><span style="color:#f92672">();</span>
+                magicChecked <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span> <span style="color:#75715e">//this line of code makes no any sense, but it&#39;s good for a warning
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readableBytes</span><span style="color:#f92672">()</span> <span style="color:#f92672">&lt;</span> ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">HEADER_LENGTH_IN_BYTES</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+
+        <span style="color:#66d9ef">int</span> bodyLength <span style="color:#f92672">=</span> in
+                <span style="color:#f92672">.</span><span style="color:#a6e22e">getInt</span><span style="color:#f92672">(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readerIndex</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">BODY_LENGTH_OFFSET</span><span style="color:#f92672">);</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readableBytes</span><span style="color:#f92672">()</span> <span style="color:#f92672">&lt;</span> bodyLength <span style="color:#f92672">+</span> ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">HEADER_LENGTH_IN_BYTES</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+        magicChecked <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span><span style="color:#75715e">// so far the whole packet was received
+</span><span style="color:#75715e"></span>
+        in<span style="color:#f92672">.</span><span style="color:#a6e22e">readShort</span><span style="color:#f92672">();</span> <span style="color:#75715e">// skip the magic
+</span><span style="color:#75715e"></span>        in<span style="color:#f92672">.</span><span style="color:#a6e22e">readByte</span><span style="color:#f92672">();</span> <span style="color:#75715e">// dont care about the protocol version so far
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">byte</span> type <span style="color:#f92672">=</span> in<span style="color:#f92672">.</span><span style="color:#a6e22e">readByte</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">byte</span> status <span style="color:#f92672">=</span> in<span style="color:#f92672">.</span><span style="color:#a6e22e">readByte</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">long</span> contextId <span style="color:#f92672">=</span> in<span style="color:#f92672">.</span><span style="color:#a6e22e">readLong</span><span style="color:#f92672">();</span>
+
+        <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span> body <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">byte</span><span style="color:#f92672">[</span>in<span style="color:#f92672">.</span><span style="color:#a6e22e">readInt</span><span style="color:#f92672">()];</span>
+        in<span style="color:#f92672">.</span><span style="color:#a6e22e">readBytes</span><span style="color:#f92672">(</span>body<span style="color:#f92672">);</span>
+
+        RpcMessage message <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        MessageType messageType <span style="color:#f92672">=</span> MessageType<span style="color:#f92672">.</span><span style="color:#a6e22e">valueOf</span><span style="color:#f92672">(</span>type<span style="color:#f92672">);</span>
+
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>messageType <span style="color:#f92672">==</span> MessageType<span style="color:#f92672">.</span><span style="color:#a6e22e">RESPONSE</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            message <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> RpcResponse<span style="color:#f92672">(</span>contextId<span style="color:#f92672">);</span>
+            <span style="color:#f92672">((</span>RpcResponse<span style="color:#f92672">)</span> message<span style="color:#f92672">).</span><span style="color:#a6e22e">setStatus</span><span style="color:#f92672">(</span>InvocationStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">valueOf</span><span style="color:#f92672">(</span>status<span style="color:#f92672">));</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+            message <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> RpcRequest<span style="color:#f92672">(</span>contextId<span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+        message<span style="color:#f92672">.</span><span style="color:#a6e22e">setType</span><span style="color:#f92672">(</span>messageType<span style="color:#f92672">);</span>
+        message<span style="color:#f92672">.</span><span style="color:#a6e22e">setData</span><span style="color:#f92672">(</span>body<span style="color:#f92672">);</span>
+        list<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(</span>message<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>可以看到，我们解决半包问题的时候，是判断有没有收到我们期望收到的报文，如果没有，直接在 decode 方法里面 return，等有更多的报文被收到的时候，netty 会自动帮我们调起 decode 方法。而我们解决粘包问题的思路也很清晰，那就是一次只处理一个报文，不去动后面的报文内容。</p>
+<p>还需要注意的是，在 netty 中，对于 ByteBuf 的 get 是不会消费掉报文的，而 read 是会消费掉报文的。当不确定报文是否收完整的时候，我们都是用 get开头的方法去试探性地验证报文是否接收完全，当确定报文接收完全后，我们才用 read 开头的方法去消费这段报文。</p>
+<h1 id="encode">encode</h1>
+<p>直接贴代码，参考前文提到的协议格式阅读以下代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * 协议编码器
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ProtocolEncoder</span> <span style="color:#66d9ef">extends</span> MessageToByteEncoder<span style="color:#f92672">&lt;</span>RpcMessage<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">encode</span><span style="color:#f92672">(</span>ChannelHandlerContext ctx<span style="color:#f92672">,</span> RpcMessage rpcMessage<span style="color:#f92672">,</span> ByteBuf out<span style="color:#f92672">)</span>
+            <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">byte</span> status<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span> data <span style="color:#f92672">=</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">[])</span> rpcMessage<span style="color:#f92672">.</span><span style="color:#a6e22e">getData</span><span style="color:#f92672">();</span>
+
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>rpcMessage <span style="color:#66d9ef">instanceof</span> RpcRequest<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            RpcRequest request <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>RpcRequest<span style="color:#f92672">)</span> rpcMessage<span style="color:#f92672">;</span>
+            status <span style="color:#f92672">=</span> InvocationStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">OK</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getCode</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+            RpcResponse response <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>RpcResponse<span style="color:#f92672">)</span> rpcMessage<span style="color:#f92672">;</span>
+            status <span style="color:#f92672">=</span> response<span style="color:#f92672">.</span><span style="color:#a6e22e">getStatus</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getCode</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeShort</span><span style="color:#f92672">(</span>ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">MAGIC</span><span style="color:#f92672">);</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeByte</span><span style="color:#f92672">(</span>ProtocolMetaData<span style="color:#f92672">.</span><span style="color:#a6e22e">VERSION</span><span style="color:#f92672">);</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeByte</span><span style="color:#f92672">(</span>rpcMessage<span style="color:#f92672">.</span><span style="color:#a6e22e">getType</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getCode</span><span style="color:#f92672">());</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeByte</span><span style="color:#f92672">(</span>status<span style="color:#f92672">);</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeLong</span><span style="color:#f92672">(</span>rpcMessage<span style="color:#f92672">.</span><span style="color:#a6e22e">getContextId</span><span style="color:#f92672">());</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeInt</span><span style="color:#f92672">(</span>data<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">);</span>
+        out<span style="color:#f92672">.</span><span style="color:#a6e22e">writeBytes</span><span style="color:#f92672">(</span>data<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h1 id="序列化">序列化</h1>
+<p>由于我们还未谈到具体的 RPC 调用机制，因此暂且认为 encode 就是把一个包含了调用信息的 Java 对象，从 client 经过序列化，变成一串二进制流，发送到了 server 端。
+这里需要明确的是，encode 的职责是拼协议，它不负责序列化，同样，decode 只是把整个二进制报文分割，哪部分是报文头，哪部分是报文体，诚然，报文体就是被序列化成二进制流的一个 Java 对象。
+对于调用方来说，先将调用信息封装成一个 Java 对象，经过序列化后形成二进制流，再经过 encode 阶段，拼接成一个完整的遵守我们定好的协议的报文。
+对于被调用方来说，则是收取完整的报文，在 decode 阶段将报文中的报文头，报文体分割出来，在序列化阶段将报文体反序列化为一个 Java 对象，从而获得调用信息。
+本文探讨序列化机制。</p>
+<h1 id="基于-netty-handler">基于 netty handler</h1>
+<p>由于这个 RPC 框架基于 netty 实现，因此序列化机制其实体现在了 netty 的 pipeline 上的 handler 上。
+例如对于调用方，它需要在 pipeline 上加上一个 序列化 encode handler，用来序列化发出去的请求，同时需要加上一个反序列化的 decode handler, 以便反序列化调用结果。如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">                    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">initChannel</span><span style="color:#f92672">(</span>SocketChannel ch<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+                        ChannelPipeline pipeline <span style="color:#f92672">=</span> ch<span style="color:#f92672">.</span><span style="color:#a6e22e">pipeline</span><span style="color:#f92672">();</span>
+                        pipeline<span style="color:#f92672">.</span><span style="color:#a6e22e">addLast</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> ProtocolEncoder<span style="color:#f92672">())</span>
+                                <span style="color:#f92672">.</span><span style="color:#a6e22e">addLast</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> ProtocolDecoder<span style="color:#f92672">())</span>
+                                <span style="color:#f92672">.</span><span style="color:#a6e22e">addLast</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> SerializationHandler<span style="color:#f92672">(</span>serialization<span style="color:#f92672">))</span>
+                                <span style="color:#f92672">.</span><span style="color:#a6e22e">addLast</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> DeserializationHandler<span style="color:#f92672">(</span>serialization<span style="color:#f92672">));</span>
+
+                    <span style="color:#f92672">}</span>
+</code></pre></div><p>其中的 SerializationHandler 和 DeserializationHandler 就是上文提到的序列化 encode handler 和反序列化 decode handler。
+同样，对于被调用方来说，它也需要这两个handler，与调用方的 handler 编排顺序一致。</p>
+<p>其中，serialization 这个参数的对象代表具体的序列化机制策略。</p>
+<h1 id="序列化机制">序列化机制</h1>
+<p>上文中，SerializationHandler 和 DeserializationHandler 这两个对象都需要一个 serialization 对象作为参数，它是这么定义的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> ISerialization serialization <span style="color:#f92672">=</span> SerializationFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getSerialization</span><span style="color:#f92672">(</span>ServerDefaults<span style="color:#f92672">.</span><span style="color:#a6e22e">DEFAULT_SERIALIZATION_TYPE</span><span style="color:#f92672">);</span>
+</code></pre></div><p>采用工厂模式来创建具体的序列化机制：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * 序列化工厂
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SerializationFactory</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">SerializationFactory</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> ISerialization <span style="color:#a6e22e">getSerialization</span><span style="color:#f92672">(</span>SerializationType type<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>type <span style="color:#f92672">==</span> SerializationType<span style="color:#f92672">.</span><span style="color:#a6e22e">JDK</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> JdkSerialization<span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> HessianSerialization<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>这里暂时只支持 JDK 原生序列化 和 基于 Hessian 的序列化机制，日后若有其他效率更高更适合的序列化机制，则可以在工厂类中进行添加。</p>
+<blockquote>
+<p>这里的 hessian 序列化是从 dubbo 中剥离出来的一块代码，感兴趣可以从 dubbo 的源码中的 com.caucho.hessian 包中获得。</p>
+</blockquote>
+<p>以 HessianSerialization 为例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HessianSerialization</span> <span style="color:#66d9ef">implements</span> ISerialization <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> ISerializer serializer <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HessianSerializer<span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">private</span> IDeserializer deserializer <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HessianDeserializer<span style="color:#f92672">();</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> ISerializer <span style="color:#a6e22e">getSerializer</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> serializer<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> IDeserializer <span style="color:#a6e22e">getDeserializer</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> deserializer<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>Class<span style="color:#f92672">&lt;?&gt;</span> clazz<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> Serializable<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">isAssignableFrom</span><span style="color:#f92672">(</span>clazz<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>根据 Hessian 的 API， 分别返回一个 hessian 的序列化器和反序列化器即可。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>1141</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2018%2fjava-rpc%2f&amp;appkey=&amp;title=Java%20%e7%ae%80%e6%98%93RPC%e6%a1%86%e6%9e%b6" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2018/java-monitor/" class="prev" rel="prev" title="Java 中的 Monitor 机制"><i class="iconfont icon-dajiantou"></i>&nbsp;Java 中的 Monitor 机制</a>
+         
+        
+        <a href="/2019/master-interview-pick-1/" class="next" rel="next" title="《编程大师访谈录》文摘1">《编程大师访谈录》文摘1&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2018-11-06 23:08:41 \u002b0800 CST',
+              title: 'Java 简易RPC框架',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
