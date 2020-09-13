@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/druid-sql-parser/" />
+  <link rel="next" href="/2018/clh-queue/" />
+  <link rel="canonical" href="/2017/redis-sort-explain/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           redis sort 命令详解 | beanlam
+       
+  </title>
+  <meta name="title" content="redis sort 命令详解 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="redis sort 命令详解"/>
+<meta name="twitter:description" content="基本使用 命令格式：
+SORT key [BY pattern] [LIMIT offset count] [GET pattern [GET pattern ...]] [ASC|DESC] [ALPHA] [STORE destination] 默认情况下，排序是基于数字的，各个元素将会被转化成双精度浮点数来进行大小比较，这是SORT命令最简单的形式，也就是下面这种形式：
+SORT mylist 如果mylist是一个包含了数字元素的列表，那么上面的命令将会返回升序排列的一个列表。如果想要降序排序，要使用DESC描述符，如下所示：
+SORT mylist DESC 如果mylist包含的元素是string类型的，想要按字典顺序排列这个列表，那么就要用到ALPHA描述符，如下所示：
+SORT mylist ALPHA Redis是基于UTF-8编码来处理数据的, 要确保你先设置好了!LC_COLLATE环境变量。
+对于返回的元素个数也是可以进行限制的，只需要使用LIMIT描述符。使用这个描述符，你需要提供偏移量参数，来指定需要跳过多少个元素，返回多少个元素。 下面这个例子将会返回一个已经排序好了的列表中的10个元素，从下标为0开始：
+SORT mylist LIMIT 0 10 几乎全部的描述符都可以同时使用。例如下面这个例子所示，它将会返回前5个元素，以字典顺序降序排列：
+SORT mylist LIMIT 0 5 ALPHA DESC 通过外部key来排序 有时候，你会想要用外部的key来作为权重去排列列表或集合中的元素，而不是使用列表或集合中本来就有的元素来排列。 下面以一个例子来解释： 假设现在有一张这样的表，有商品id，商品价格，以及商品的重量。
+   gid price_{gid} weight_{gid}     1 20 3   2 40 2   3 30 4   4 10 1    首先将上述表格的数据导入到redis中(redis版本：2."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "redis sort 命令详解",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/redis-sort-explain\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  443 ,
+  "url": "\/2017\/redis-sort-explain\/",
+  "datePublished": "2017-06-07T22:24:47\u002b08:00",
+  "dateModified": "2017-06-07T22:24:47\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">redis sort 命令详解</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-06-07 >7 June 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/redis/"> redis </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                3 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="基本使用">基本使用</h1>
+<p><strong>命令格式</strong>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT key <span style="color:#f92672">[</span>BY pattern<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>LIMIT offset count<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>GET pattern <span style="color:#f92672">[</span>GET pattern ...<span style="color:#f92672">]]</span> <span style="color:#f92672">[</span>ASC|DESC<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>ALPHA<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>STORE destination<span style="color:#f92672">]</span> 
+</code></pre></div><p>默认情况下，排序是基于数字的，各个元素将会被转化成双精度浮点数来进行大小比较，这是<code>SORT</code>命令最简单的形式，也就是下面这种形式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist
+</code></pre></div><p>如果<code>mylist</code>是一个包含了数字元素的列表，那么上面的命令将会返回升序排列的一个列表。如果想要降序排序，要使用<code>DESC</code>描述符，如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist DESC
+</code></pre></div><p>如果<code>mylist</code>包含的元素是string类型的，想要按字典顺序排列这个列表，那么就要用到<code>ALPHA</code>描述符，如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist ALPHA
+</code></pre></div><p>Redis是基于UTF-8编码来处理数据的, 要确保你先设置好了!LC_COLLATE环境变量。</p>
+<p>对于返回的元素个数也是可以进行限制的，只需要使用<code>LIMIT</code>描述符。使用这个描述符，你需要提供偏移量参数，来指定需要跳过多少个元素，返回多少个元素。 下面这个例子将会返回一个已经排序好了的列表中的10个元素，从下标为0开始：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist LIMIT <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">10</span>
+</code></pre></div><p>几乎全部的描述符都可以同时使用。例如下面这个例子所示，它将会返回前5个元素，以字典顺序降序排列：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist LIMIT <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">5</span> ALPHA DESC
+</code></pre></div><h1 id="通过外部key来排序">通过外部key来排序</h1>
+<p>有时候，你会想要用外部的key来作为权重去排列列表或集合中的元素，而不是使用列表或集合中本来就有的元素来排列。
+下面以一个例子来解释：
+假设现在有一张这样的表，有商品id，商品价格，以及商品的重量。</p>
+<table>
+<thead>
+<tr>
+<th>gid</th>
+<th>price_{gid}</th>
+<th>weight_{gid}</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>20</td>
+<td>3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>40</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>30</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>10</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>首先将上述表格的数据导入到redis中(redis版本：2.8.6)</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; lpush gid <span style="color:#ae81ff">1</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">1</span>
+127.0.0.1:6379&gt; lpush gid <span style="color:#ae81ff">2</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">2</span>
+127.0.0.1:6379&gt; lpush gid <span style="color:#ae81ff">3</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">3</span>
+127.0.0.1:6379&gt; lpush gid <span style="color:#ae81ff">4</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">4</span>
+127.0.0.1:6379&gt; set price_1 <span style="color:#ae81ff">20</span>
+OK
+127.0.0.1:6379&gt; set price_2 <span style="color:#ae81ff">40</span>
+OK
+127.0.0.1:6379&gt; set price_3 <span style="color:#ae81ff">30</span>
+OK
+127.0.0.1:6379&gt; set price_4 <span style="color:#ae81ff">10</span>
+OK
+127.0.0.1:6379&gt; set weight_1 <span style="color:#ae81ff">3</span>
+OK
+127.0.0.1:6379&gt; set weight_2 <span style="color:#ae81ff">2</span>
+OK
+127.0.0.1:6379&gt; set weight_3 <span style="color:#ae81ff">4</span>
+OK
+127.0.0.1:6379&gt; set weight_4 <span style="color:#ae81ff">1</span>
+OK
+
+</code></pre></div><p>默认情况下对gid排序，只会按gid的值来排序</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+</code></pre></div><p>但是通过BY描述符，可以指定gid按照别的key来排序。例如我想要按照商品的价格来排序：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid by price_*
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+</code></pre></div><p>可以看到，gid为4的商品价格最低，为10，gid为2的商品价格最高，为40。</p>
+<p>在这里，price_*中的*是一个占位符，先会把gid的值取出，代入到*中，再去查找price_*的值。例如在本例中，price_*中的*会分别被1,2,3,4代替，然后去取price_1,price_2,price_3,price_4的值来进行排序。</p>
+<h1 id="跳过排序不进行排序">跳过排序(不进行排序)</h1>
+<p>BY描述符也可以使用一个根本不存在的key来作为排序规则，则直接导致的结果就是不进行任何排序。 这看上去似乎没什么用，但是如果你想要取得外部的keys时，跳过排序就非常有用了，这也会减少性能损耗。</p>
+<p>要理解不排序的好处，首先要先了解一下GET描述符。
+使用GET描述符，可以根据排序结果取出外部键值。例如以下命令：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid get price_*
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;20&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;40&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;30&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;10&#34;</span>
+</code></pre></div><p>先对gid排序，然后再分别取出price_{gid}的值。
+也可以使用多个GET，获取多个外部key的值，例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid get price_* get weight_*
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;20&#34;</span> <span style="color:#75715e"># 这是price</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>  <span style="color:#75715e"># 这是weight，以下类推</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;40&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+5<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;30&#34;</span>
+6<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+7<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;10&#34;</span>
+8<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+</code></pre></div><p>get也可以使用#来获取被排序的key的值，例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid get <span style="color:#75715e"># get price_*</span>
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>  <span style="color:#75715e">#这里取出的就是gid</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;20&#34;</span> <span style="color:#75715e">#这里是price，以下类推</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;40&#34;</span>
+5<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+6<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;30&#34;</span>
+7<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+8<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;10&#34;</span>
+</code></pre></div><p>通过结合不排序和GET，能够在不排序的情况下，一次取得多个key的值。例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid by no-existed get <span style="color:#75715e"># get price_* get weight_*</span>
+ 1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>   <span style="color:#75715e">#这是gid</span>
+ 2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;10&#34;</span>  <span style="color:#75715e">#这是price</span>
+ 3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>   <span style="color:#75715e">#这是weight，以下类推</span>
+ 4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+ 5<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;30&#34;</span>
+ 6<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+ 7<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+ 8<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;40&#34;</span>
+ 9<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+10<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+11<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;20&#34;</span>
+12<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+</code></pre></div><h1 id="将排序结果保存在redis中">将排序结果保存在Redis中</h1>
+<p>默认情况下，排序结果会返回给客户端。使用STORE描述符，可以将结果存储在指定key上，如果Key已经存在，则覆盖。而不将排序结果返回给客户端。用法如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist BY weight_* STORE resultkey
+</code></pre></div><p>下面举一个例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; rpush num <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">5</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">3</span>
+127.0.0.1:6379&gt; rpush num <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">6</span>
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">6</span>
+127.0.0.1:6379&gt; lrange num <span style="color:#ae81ff">0</span> -1
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;5&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+5<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+6<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;6&#34;</span>
+127.0.0.1:6379&gt; sort num store num_sorted
+<span style="color:#f92672">(</span>integer<span style="color:#f92672">)</span> <span style="color:#ae81ff">6</span>
+127.0.0.1:6379&gt; lrange num_sorted <span style="color:#ae81ff">0</span> -1
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+5<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;5&#34;</span>
+6<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;6&#34;</span>
+</code></pre></div><h1 id="将哈希表作为get或by的参数">将哈希表作为GET或BY的参数</h1>
+<p>可以将哈希表的字段作为GET或者BY的参数，用法如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SORT mylist BY weight_*-&gt;fieldname GET object_*-&gt;fieldname
+</code></pre></div><p>对于前面所用到的例子：</p>
+<table>
+<thead>
+<tr>
+<th>gid</th>
+<th>price_{gid}</th>
+<th>weight_{gid}</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>20</td>
+<td>3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>40</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>30</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>10</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>我们可以不把price_{gid}和weight_{id}用string类型来保存，而是对于每一个gid，创建一个包含price和weight字段的hash表good_info_{gid}来存储商品信息。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; hmset good_info_1 price <span style="color:#ae81ff">20</span> weight <span style="color:#ae81ff">3</span>
+OK
+127.0.0.1:6379&gt; hmset good_info_2 price <span style="color:#ae81ff">40</span> weight <span style="color:#ae81ff">2</span>
+OK
+127.0.0.1:6379&gt; hmset good_info_3 price <span style="color:#ae81ff">30</span> weight <span style="color:#ae81ff">4</span>
+OK
+127.0.0.1:6379&gt; hmset good_info_4 price <span style="color:#ae81ff">10</span> weight <span style="color:#ae81ff">1</span>
+OK
+</code></pre></div><p>之后， by 和 get 选项都可以用 key-&gt;field 的格式来获取哈希表中的域的值， 其中 key 表示哈希表键， 而 field 则表示哈希表的域：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">127.0.0.1:6379&gt; sort gid by good_info_*-&gt;price
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+127.0.0.1:6379&gt; sort gid by good_info_*-&gt;price get good_info_*-&gt;weight
+1<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;1&#34;</span>
+2<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;3&#34;</span>
+3<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;4&#34;</span>
+4<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;2&#34;</span>
+</code></pre></div><h1 id="返回值">返回值</h1>
+<p>如果没有使用 store 描述符，返回列表形式的排序结果。
+如果使用 store 参数，返回排序结果的元素数量。</p>
+<h1 id="参考资料">参考资料</h1>
+<p><a href="http://redis.io/commands/sort">Redis官网SORT命令介绍</a></p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>443</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fredis-sort-explain%2f&amp;appkey=&amp;title=redis%20sort%20%e5%91%bd%e4%bb%a4%e8%af%a6%e8%a7%a3" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/druid-sql-parser/" class="prev" rel="prev" title="Druid SQL 解析器"><i class="iconfont icon-dajiantou"></i>&nbsp;Druid SQL 解析器</a>
+         
+        
+        <a href="/2018/clh-queue/" class="next" rel="next" title="线程安全实现与 CLH 队列">线程安全实现与 CLH 队列&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-06-07 22:24:47 \u002b0800 CST',
+              title: 'redis sort 命令详解',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

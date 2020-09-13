@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>redis on beanlam</title>
+    <link>/categories/redis/</link>
+    <description>Recent content in redis on beanlam</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>cn</language>
+    <lastBuildDate>Wed, 07 Jun 2017 22:24:47 +0800</lastBuildDate>
+    
+	<atom:link href="/categories/redis/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>redis sort 命令详解</title>
+      <link>/2017/redis-sort-explain/</link>
+      <pubDate>Wed, 07 Jun 2017 22:24:47 +0800</pubDate>
+      
+      <guid>/2017/redis-sort-explain/</guid>
+      <description>基本使用 命令格式：
+SORT key [BY pattern] [LIMIT offset count] [GET pattern [GET pattern ...]] [ASC|DESC] [ALPHA] [STORE destination] 默认情况下，排序是基于数字的，各个元素将会被转化成双精度浮点数来进行大小比较，这是SORT命令最简单的形式，也就是下面这种形式：
+SORT mylist 如果mylist是一个包含了数字元素的列表，那么上面的命令将会返回升序排列的一个列表。如果想要降序排序，要使用DESC描述符，如下所示：
+SORT mylist DESC 如果mylist包含的元素是string类型的，想要按字典顺序排列这个列表，那么就要用到ALPHA描述符，如下所示：
+SORT mylist ALPHA Redis是基于UTF-8编码来处理数据的, 要确保你先设置好了!LC_COLLATE环境变量。
+对于返回的元素个数也是可以进行限制的，只需要使用LIMIT描述符。使用这个描述符，你需要提供偏移量参数，来指定需要跳过多少个元素，返回多少个元素。 下面这个例子将会返回一个已经排序好了的列表中的10个元素，从下标为0开始：
+SORT mylist LIMIT 0 10 几乎全部的描述符都可以同时使用。例如下面这个例子所示，它将会返回前5个元素，以字典顺序降序排列：
+SORT mylist LIMIT 0 5 ALPHA DESC 通过外部key来排序 有时候，你会想要用外部的key来作为权重去排列列表或集合中的元素，而不是使用列表或集合中本来就有的元素来排列。 下面以一个例子来解释： 假设现在有一张这样的表，有商品id，商品价格，以及商品的重量。
+   gid price_{gid} weight_{gid}     1 20 3   2 40 2   3 30 4   4 10 1    首先将上述表格的数据导入到redis中(redis版本：2.</description>
+    </item>
+    
+    <item>
+      <title>redis sentinel 机制与用法</title>
+      <link>/2015/redis-sentinel/</link>
+      <pubDate>Fri, 17 Apr 2015 22:08:56 +0800</pubDate>
+      
+      <guid>/2015/redis-sentinel/</guid>
+      <description>本文参考自《Redis Sentinel Documentation》
+ 概述 Redis-Sentinel是Redis官方推荐的高可用性(HA)解决方案，当用Redis做Master-slave的高可用方案时，假如master宕机了，Redis本身(包括它的很多客户端)都没有实现自动进行主备切换，而Redis-sentinel本身也是一个独立运行的进程，它能监控多个master-slave集群，发现master宕机后能进行自动切换。
+它的主要功能有以下几点
+ 不时地监控redis是否按照预期良好地运行; 如果发现某个redis节点运行出现状况，能够通知另外一个进程(例如它的客户端); 能够进行自动切换。  当一个master节点不可用时，能够选举出master的多个slave(如果有超过一个slave的话)中的一个来作为新的master，其它的slave节点会将它所追随的master的地址改为被提升为master的slave的新地址。
+Sentinel支持集群 很显然，只使用单个sentinel进程来监控redis集群是不可靠的，当sentinel进程宕掉后(sentinel本身也有单点问题，single-point-of-failure)整个集群系统将无法按照预期的方式运行。所以有必要将sentinel集群，这样有几个好处：
+ 即使有一些sentinel进程宕掉了，依然可以进行redis集群的主备切换； 如果只有一个sentinel进程，如果这个进程运行出错，或者是网络堵塞，那么将无法实现redis集群的主备切换（单点问题）; 如果有多个sentinel，redis的客户端可以随意地连接任意一个sentinel来获得关于redis集群中的信息。  Sentinel版本 Sentinel当前最新的稳定版本称为Sentinel 2(与之前的Sentinel 1区分开来）。随着redis2.8的安装包一起发行。安装完Redis2.8后，可以在**redis2.8/src/**里面找到Redis-sentinel的启动程序。
+ 强烈建议： 如果你使用的是redis2.6(sentinel版本为sentinel 1)，你最好应该使用redis2.8版本的sentinel 2，因为sentinel 1有很多的Bug，已经被官方弃用，所以强烈建议使用redis2.8以及sentinel 2。
+ 运行Sentinel 运行sentinel有两种方式：
+ 第一种  redis-sentinel /path/to/sentinel.conf  第二种  redis-server /path/to/sentinel.conf --sentinel 以上两种方式，都必须指定一个sentinel的配置文件sentinel.conf，如果不指定，将无法启动sentinel。sentinel默认监听26379端口，所以运行前必须确定该端口没有被别的进程占用。
+Sentinel的配置 Redis源码包中包含了一个sentinel.conf文件作为sentinel的配置文件，配置文件自带了关于各个配置项的解释。典型的配置项如下所示：
+sentinel monitor mymaster 127.0.0.1 6379 2 sentinel down-after-milliseconds mymaster 60000 sentinel failover-timeout mymaster 180000 sentinel parallel-syncs mymaster 1 sentinel monitor resque 192.</description>
+    </item>
+    
+  </channel>
+</rss>

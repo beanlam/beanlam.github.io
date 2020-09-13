@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/jdbc4.2-spec-11/" />
+  <link rel="next" href="/2017/redis-sort-explain/" />
+  <link rel="canonical" href="/2017/druid-sql-parser/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           Druid SQL 解析器 | beanlam
+       
+  </title>
+  <meta name="title" content="Druid SQL 解析器 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Druid SQL 解析器"/>
+<meta name="twitter:description" content="认识 Druid Druid 是阿里巴巴公司开源的一个数据库连接池，它的口号是：为监控而生的数据库连接池
+根据官方 wiki的介绍
+ Druid 是一个 JDBC 组件库，包括数据库连接池、SQL Parser 等组件，DruidDataSource 是最好的数据库连接池。
+ 显然，官方有意无意地强调了 DruidDataSource 是最好的数据库连接池 -_- &hellip;
+Druid SQL 解析器 Druid 作为一个数据库连接池，功能很多，但我接触 Druid 的时候，却不是因为它有世界上最好的数据库连接池实现。而是因为有些开源项目(比如，mycat)，借用了 Druid 的 SQL 解析功能。我需要研究这个开源项目，发现作为一个数据库中间件，它的 SQL 解析功能是直接引用的 Druid，Druid 包除了 SQL 解析模块的代码外，其它的代码并没有使用到。而这部分代码显然让人在研究 SQL 解析器代码时容易分心，产生厚重感和焦虑感。
+Druid 本来的代码结构如下： 提取 Druid SQL 解析器 在确认我并不需要使用到全世界最好的数据库连接池后，我想把除了 SQL 解析部分的代码全部剔除，仅仅留下 SQL 解析器模块。
+一开始的做法当然是“暴力删除”，通过对代码的整体浏览，大概判断出哪些 package 与 SQL 解析有关，其余的直接删除。这样做会有些问题，比如说直接删除后在 IDE 中会立马浮现一些小红叉叉，但令人感到愉悦的是，Druid 的模块分解做得十分优秀，SQL 解析模块基本上作为一个工具模块，与其它模块实际上是分离的。
+因此虽然是“暴力删除”，却也得到了一个令人满意的结果。
+由于我只关注的是 Druid 对 MySQL 方言的解析，并且也不想看到 Druid 解析其它数据库方言的内容，也不愿被 Druid 那些为了适应多种数据库的“兼容性代码”混淆视听，因此狠下心来，把对其它 SQL 方言的支持也全都剔除，只留下与 MySQL 相关的代码。"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Druid SQL 解析器",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2017\/druid-sql-parser\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  768 ,
+  "url": "\/2017\/druid-sql-parser\/",
+  "datePublished": "2017-06-07T17:43:33\u002b08:00",
+  "dateModified": "2017-06-07T17:43:33\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">Druid SQL 解析器</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2017-06-07 >7 June 2017</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/%E8%A7%A3%E6%9E%90%E5%99%A8/"> 解析器 </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                4 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="认识-druid">认识 Druid</h1>
+<p>Druid 是阿里巴巴公司开源的一个数据库连接池，它的口号是：<strong>为监控而生的数据库连接池</strong></p>
+<p>根据<a href="https://github.com/alibaba/druid/wiki">官方 wiki</a>的介绍</p>
+<blockquote>
+<p>Druid 是一个 JDBC 组件库，包括数据库连接池、SQL Parser 等组件，DruidDataSource 是最好的数据库连接池。</p>
+</blockquote>
+<p>显然，官方有意无意地强调了 DruidDataSource 是最好的数据库连接池 -_- &hellip;</p>
+<h1 id="druid-sql-解析器">Druid SQL 解析器</h1>
+<p>Druid 作为一个数据库连接池，功能很多，但我接触 Druid 的时候，却不是因为它有世界上最好的数据库连接池实现。而是因为有些开源项目(比如，mycat)，借用了 Druid 的 SQL 解析功能。我需要研究这个开源项目，发现作为一个数据库中间件，它的 SQL 解析功能是直接引用的 Druid，Druid 包除了 SQL 解析模块的代码外，其它的代码并没有使用到。而这部分代码显然让人在研究 SQL 解析器代码时容易分心，产生厚重感和焦虑感。</p>
+<p>Druid 本来的代码结构如下：
+<figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/druid-sql-parser/code-structure-before.jpg" alt="提取前代码结构" class="lazyload"><figcaption class="image-caption">提取前代码结构</figcaption></figure></p>
+<h1 id="提取-druid-sql-解析器">提取 Druid SQL 解析器</h1>
+<p>在确认我并不需要使用到全世界最好的数据库连接池后，我想把除了 SQL 解析部分的代码全部剔除，仅仅留下 SQL 解析器模块。</p>
+<p>一开始的做法当然是“暴力删除”，通过对代码的整体浏览，大概判断出哪些 package 与 SQL 解析有关，其余的直接删除。这样做会有些问题，比如说直接删除后在 IDE 中会立马浮现一些小红叉叉，但令人感到愉悦的是，Druid 的模块分解做得十分优秀，SQL 解析模块基本上作为一个工具模块，与其它模块实际上是分离的。</p>
+<p>因此虽然是“暴力删除”，却也得到了一个令人满意的结果。</p>
+<p>由于我只关注的是 Druid 对 MySQL 方言的解析，并且也不想看到 Druid 解析其它数据库方言的内容，也不愿被 Druid 那些为了适应多种数据库的“兼容性代码”混淆视听，因此狠下心来，把对其它 SQL 方言的支持也全都剔除，只留下与 MySQL 相关的代码。</p>
+<p>剔除其它 SQL 方言并不是一个麻烦事，这也得益于 Druid 优秀的代码层次结构，基本上，只是拿类似以下形式的代码动刀</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span> type is oracle<span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">do</span> something<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> type is db2<span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">do</span> something<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> type is H2<span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">do</span> something<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> type is MySQL<span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">do</span> something<span style="color:#f92672">;</span>
+</code></pre></div><p>把上面的代码，修改成：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span> type is MySQL<span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">do</span> something<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">else</span><span style="color:#f92672">:</span>
+	<span style="color:#66d9ef">throw</span> some exception<span style="color:#f92672">;</span>
+</code></pre></div><p>经过两层提取后，整个 Druid 就只剩下这些代码了</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/druid-sql-parser/code-structure-after.jpg" alt="提取后代码结构" class="lazyload"><figcaption class="image-caption">提取后代码结构</figcaption></figure></p>
+<h1 id="解析器概览">解析器概览</h1>
+<p>Druid 的<a href="https://github.com/alibaba/druid/wiki">官方 wiki</a> 对 SQL 解析器部分的讲解内容并不多，但虽然不多，也有利于完全没接触过 Druid 的人对 SQL 解析器有个初步的印象。</p>
+<p>说到解析器，脑海里便很容易浮现 <strong>parser</strong> 这个单词，然后便很容易联想到计算机科学中理论性比较强的学科&mdash;&mdash;<strong>编译原理</strong>。想必很多人都知道（即使不知道，应该也耳濡目染）能够手写编译器的人并不多，并且这类人呢，理论知识和工程能力都比较强。在缺乏人力的条件下，大多数时候实现一个编译器，往往是选择采用一些工具，比如说 <strong>ANTLR</strong>，只需要描述好语法规则，这个工具就能生成对应的编译器。</p>
+<p>不过，Druid 的 SQL 解析器是手写的，官方宣称性能是 ANTLR 这类工具的10倍以上。</p>
+<h1 id="解析器组成部分">解析器组成部分</h1>
+<p>在 Druid 的 SQL 解析器中，有三个重要的组成部分，它们分别是：</p>
+<ul>
+<li>Parser
+<ul>
+<li>词法分析</li>
+<li>语法分析</li>
+</ul>
+</li>
+<li>AST(Abstract Syntax Tree，抽象语法树)</li>
+<li>Visitor</li>
+</ul>
+<p>这三者的关系如下图所示：</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/druid-sql-parser/relationship.jpg" alt="关系" class="lazyload"><figcaption class="image-caption">关系</figcaption></figure></p>
+<p>Parser 由两部分组成，词法分析和语法分析。
+当拿到一条形如 <code>select id, name from user</code> 的 SQL 语句后，首先需要解析出每个独立的单词，select，id，name，from，user。这一部分，称为<strong>词法分析</strong>，也叫作 <strong>Lexer</strong>。
+通过词法分析后，便要进行语法分析了。
+经常能听到很多人在调侃自己英文水平很一般时会说：<strong>26个字母我都知道，但是一组合在一起我就不知道是什么意思了</strong>。这说明他掌握了词法分析的技能，却没有掌握语法分析的技能。
+那么对于 SQL 解析器来说呢，它不仅需要知道每个单词，而且要知道这些单词组合在一起后，表达了什么含义。语法分析的职责就是明确一个语句的语义，表达的是什意思。
+自然语言和形式语言的一个重要区别是，自然语言的一个语句，可能有多重含义，而形式语言的一个语句，只能有一个语义;形式语言的语法是人为规定的，有了一定的语法规则，语法解析器就能根据语法规则，解析出一个语句的一个唯一含义。</p>
+<p>AST 是 Parser 的产物，语句经过词法分析，语法分析后，它的结构需要以一种计算机能读懂的方式表达出来，最常用的就是抽象语法树。
+树的概念很接近于一个语句结构的表示，一个语句，我们经常会对它这样看待：它由哪些部分组成？其中一个组成部分又有哪些部分组成？例如一条 select 语句，它由 select 列表、where 子句、排序字段、分组字段等组成，而 select 列表则由一个或多个 select 项组成，where 子句又由一个或者多个 where条件组成。
+在我们人类的思维中，这种组成结构就是一个总分的逻辑结构，用树来表达，最合适不过。并且对于计算机来说，它显然比人类更擅长处理“树”。</p>
+<p>AST 仅仅是语义的表示，但如何对这个语义进行表达，便需要去访问这棵 AST，看它到底表达什么含义。通常遍历语法树，使用 VISITOR 模式去遍历，从根节点开始遍历，一直到最后一个叶子节点，在遍历的过程中，便不断地收集信息到一个上下文中，整个遍历过程完成后，对这棵树所表达的语法含义，已经被保存到上下文了。有时候一次遍历还不够，需要二次遍历。遍历的方式，广度优先的遍历方式是最常见的。</p>
+<h1 id="快速上手">快速上手</h1>
+<p>使用 Druid SQL Parser 来解析 SQL 语句，一般需要进行以下几个步骤：</p>
+<ol>
+<li>新建一个 Parser</li>
+<li>使用 Parser 解析 SQL，生成 AST</li>
+<li>使用 Visitor 访问 AST</li>
+</ol>
+<p>如下代码所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> io.beansoft.demo<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> com.alibaba.druid.sql.ast.SQLStatement<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> com.alibaba.druid.sql.dialect.mysql.visitor.MySqlSchemaStatVisitor<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> com.alibaba.druid.sql.parser.SQLStatementParser<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @date 2017年1月10日 下午11:06:26
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ParserMain</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        String sql <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;select id,name from user&#34;</span><span style="color:#f92672">;</span>
+
+        <span style="color:#75715e">// 新建 MySQL Parser
+</span><span style="color:#75715e"></span>        SQLStatementParser parser <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlStatementParser<span style="color:#f92672">(</span>sql<span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// 使用Parser解析生成AST，这里SQLStatement就是AST
+</span><span style="color:#75715e"></span>        SQLStatement statement <span style="color:#f92672">=</span> parser<span style="color:#f92672">.</span><span style="color:#a6e22e">parseStatement</span><span style="color:#f92672">();</span>
+
+        <span style="color:#75715e">// 使用visitor来访问AST
+</span><span style="color:#75715e"></span>        MySqlSchemaStatVisitor visitor <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlSchemaStatVisitor<span style="color:#f92672">();</span>
+        statement<span style="color:#f92672">.</span><span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">);</span>
+				
+        <span style="color:#75715e">// 从visitor中拿出你所关注的信息        
+</span><span style="color:#75715e"></span>        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">getColumns</span><span style="color:#f92672">());</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>以上代码运行后控制台的输出为</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>user.id, user.name<span style="color:#f92672">]</span>
+</code></pre></div><p>当然，不使用 Visitor，直接操作 AST 也可以得到 SQL 语句的信息，在 Druid 现有内置的 Visitor 不能满足需求时，可以自己去实现 Visitor，对于用 Visitor 无法解析到的信息，可以直接访问 AST 去获取。</p>
+<h1 id="解析过程">解析过程</h1>
+<p>以这份代码为例</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author beanlam
+</span><span style="color:#75715e"> * @date 2017年1月10日 下午11:06:26
+</span><span style="color:#75715e"> * @version 1.0
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ParserMain</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        
+        String sql <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;select * from user order by id&#34;</span><span style="color:#f92672">;</span>
+
+        <span style="color:#75715e">// 新建 MySQL Parser
+</span><span style="color:#75715e"></span>        SQLStatementParser parser <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlStatementParser<span style="color:#f92672">(</span>sql<span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// 使用Parser解析生成AST，这里SQLStatement就是AST
+</span><span style="color:#75715e"></span>        SQLStatement statement <span style="color:#f92672">=</span> parser<span style="color:#f92672">.</span><span style="color:#a6e22e">parseStatement</span><span style="color:#f92672">();</span>
+
+        <span style="color:#75715e">// 使用visitor来访问AST
+</span><span style="color:#75715e"></span>        MySqlSchemaStatVisitor visitor <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlSchemaStatVisitor<span style="color:#f92672">();</span>
+        statement<span style="color:#f92672">.</span><span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">);</span>
+        
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">getColumns</span><span style="color:#f92672">());</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">getOrderByColumns</span><span style="color:#f92672">());</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>一开始，需要初始化一个 Parser，在这里 <code>SQLStatementParser</code> 是一个父类，真正解析 SQL 语句的 Parser 实现是 <code>MySqlStatementParser</code>。
+Parser 的解析结果是一个 <code>SQLStatement</code>，这是一个内部维护了树状逻辑结构的类。</p>
+<h2 id="词法分析">词法分析</h2>
+<p>Druid 的代码里，代表<strong>语法分析</strong>和<strong>词法分析</strong>的类分别是 <code>SQLParser</code> 和 <code>Lexer</code>。并且， Parser 拥有一个 Lexer。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SQLParser</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> Lexer lexer<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">protected</span> String      dbType<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SQLParser</span><span style="color:#f92672">(</span>String sql<span style="color:#f92672">,</span> String dbType<span style="color:#f92672">){</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Lexer<span style="color:#f92672">(</span>sql<span style="color:#f92672">),</span> dbType<span style="color:#f92672">);</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lexer</span><span style="color:#f92672">.</span><span style="color:#a6e22e">nextToken</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SQLParser</span><span style="color:#f92672">(</span>String sql<span style="color:#f92672">){</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span>sql<span style="color:#f92672">,</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SQLParser</span><span style="color:#f92672">(</span>Lexer lexer<span style="color:#f92672">){</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span>lexer<span style="color:#f92672">,</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SQLParser</span><span style="color:#f92672">(</span>Lexer lexer<span style="color:#f92672">,</span> String dbType<span style="color:#f92672">){</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">lexer</span> <span style="color:#f92672">=</span> lexer<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">dbType</span> <span style="color:#f92672">=</span> dbType<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>经过瘦身后的 Druid 代码，其 Lexer 只有两个，分别是 <code>Lexer</code>，以及它的子类 <code>MySqlLexer</code>
+Lexer 作为词法分析器，必然拥有其词汇表，在Lexer里，以 <code>Keywords</code> 表示。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">protected</span> Keywords keywods <span style="color:#f92672">=</span> Keywords<span style="color:#f92672">.</span><span style="color:#a6e22e">DEFAULT_KEYWORDS</span><span style="color:#f92672">;</span>
+</code></pre></div><p>Keywords 实际上是 key 为单词，value 为 Token 的字典型结构，其中 Token 是单词的类型，比如说，“select” 的 Token 类型就是 Select Token，而 “abc” 的 Token 类型，则是标识符，也表示为 Identifier Token。</p>
+<p>而 <code>MySqlLexer</code> 类，除了沿用其父类的 Keywords 外，自己还有自己的 Keywords。可以理解为 Lexer 所维护的关键字集合，是通用的；而 MySqlLexer 除了有通用的关键字集合，也有属于 MySQL 数据库 SQL 方言的关键字集合。</p>
+<p>Parser 是 Lexer 的使用者，站在 Parser 的角度看，它会怎么去使用 Lexer，或者说，Lexer 应该具备怎样的功能，才能满足 Parser 的使用需求。
+Lexer 应该具备一个函数，能让使用者命令它解析一个单词，并且 Lexer 还必须提供一个函数，供使用者获取 Lexer 上一次解析到的单词以及单词的类型。
+在 Lexer 中，<code>nextToken()</code> 这个方法提供了第一个需求，只要被调用，它就按顺序从 SQL 语句的开头到结尾，解析出下一个单词；<code>token()</code> 方法，则返回了上一次解析的单词的 Token 类型，如果 Token 类型是标识符（Identifier），Lexer 还提供了一个 <code>stringVal()</code> 方法，让使用者能拿到标识符的值。</p>
+<p>走进 Lexer 的 <code>nextToken()</code> 方法，可以发现它的代码充斥着 <code>if</code> 语句和 <code>switch</code> 语句，因为解析单词的时候，是一个字符一个字符地解析，这就意味着，这个方法每次扫描一个字符，都必须判断单词是否结束，应该用什么方式来验证这个单词等等。这个过程，就是一个<strong>状态机</strong>运作的过程，每解析到一个字符，都要判断当前的状态，以决定应该进入下一个什么状态。</p>
+<h2 id="select-语法分析">Select 语法分析</h2>
+<p>有了 Lexer 这样的犀利工具，接下来就是 Parser 发挥的时候了，从 Demo 代码里可以看到，解析的开始，在于调用 <code>parser.parseStatement()</code> 方法。进到这个方法看看，发现清一色是形似如下格式的代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>lexer<span style="color:#f92672">.</span><span style="color:#a6e22e">token</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> Token<span style="color:#f92672">.</span><span style="color:#a6e22e">xxx</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+	<span style="color:#75715e">// 这里解析 xxx 类型
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>lexer<span style="color:#f92672">.</span><span style="color:#a6e22e">token</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> Token<span style="color:#f92672">.</span><span style="color:#a6e22e">aaa</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+	<span style="color:#75715e">// 这里解析 aaa 类型
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>显然，如果是分析对 Select 类型的语句的解析，那么应该关注以下的代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>lexer<span style="color:#f92672">.</span><span style="color:#a6e22e">token</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> Token<span style="color:#f92672">.</span><span style="color:#a6e22e">SELECT</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    statementList<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(</span>parseSelect<span style="color:#f92672">());</span>
+    <span style="color:#66d9ef">continue</span><span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>重点是 <code>parseSelect()</code> 方法，<code>MySqlStatementParser</code> 重载了它的父类的这个方法，因此这个方法实际上的实现细节是这样的</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> SQLStatement <span style="color:#a6e22e">parseSelect</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        MySqlSelectParser selectParser <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlSelectParser<span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">exprParser</span><span style="color:#f92672">);</span>
+        
+        SQLSelect select <span style="color:#f92672">=</span> selectParser<span style="color:#f92672">.</span><span style="color:#a6e22e">select</span><span style="color:#f92672">();</span>
+        
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>selectParser<span style="color:#f92672">.</span><span style="color:#a6e22e">returningFlag</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span> selectParser<span style="color:#f92672">.</span><span style="color:#a6e22e">updateStmt</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+        
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> SQLSelectStatement<span style="color:#f92672">(</span>select<span style="color:#f92672">,</span> JdbcConstants<span style="color:#f92672">.</span><span style="color:#a6e22e">MYSQL</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>初始化一个针对 MySQL Select 语句的 Parser，然后调用 <code>select()</code> 方法进行解析，把返回结果 <code>SQLSelect</code> 放到 <code>SQLSelectStatement</code> 里，而这个 <code>SQLSelectStatement</code>，便是我最关心的 AST 抽象语法树，SQLSelect 是它的第一个子节点。</p>
+<p>抛开解析的细节不谈，实际上我会非常关心这棵 AST 的层次结构。</p>
+<h2 id="select-抽象语法树">Select 抽象语法树</h2>
+<p>打开 <code>SQLSelectStatement</code> 的代码，扫描它的子成员，便分析出这样的一棵语法树：</p>
+<p><figure><img src="/images/ring.svg" data-sizes="auto" data-src="/assets/druid-sql-parser/ast.jpg" alt="语法树" class="lazyload"><figcaption class="image-caption">语法树</figcaption></figure></p>
+<p>这意味着，在 Druid 眼里，它是这样看待一条 Select 语句的所有成员部分的。</p>
+<h2 id="visitor">Visitor</h2>
+<p>从 demo 代码中可以看到，有了 AST 语法树后，则需要一个 visitor 来访问它</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">        <span style="color:#75715e">// 使用visitor来访问AST
+</span><span style="color:#75715e"></span>        MySqlSchemaStatVisitor visitor <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MySqlSchemaStatVisitor<span style="color:#f92672">();</span>
+        statement<span style="color:#f92672">.</span><span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">);</span>
+        
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">getColumns</span><span style="color:#f92672">());</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">getOrderByColumns</span><span style="color:#f92672">());</span>
+</code></pre></div><p>statement 调用 accept 方法，以 visitor 作为参数，开始了访问之旅。在这里 statement 的实际类型是 <code>SQLSelectStatement</code>。</p>
+<p>在 Druid 中，一条 SQL 语句中的元素，无论是高层次还是低层次的元素，都是一个 <code>SQLObject</code>，statement 是一种 SQLObject，表达式 expr 也是一种 SQLObject，函数、字段、条件等等，这些都是一种 SQLObject，SQLObject 是一个接口，<code>accept</code> 方法便是它定义的，目的是为了让访问者在访问 SQLObject 时，告知访问者一些事情，好让访问者在访问的过程中能够收集到关于该 SQLObject 的一些信息。</p>
+<p>具体的 <code>accept()</code> 实现，在 <code>SQLObjectImpl</code> 这个类中，代码如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>SQLASTVisitor visitor<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>visitor <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+
+        visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">preVisit</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">);</span>
+
+        accept0<span style="color:#f92672">(</span>visitor<span style="color:#f92672">);</span>
+
+        visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">postVisit</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>这是一个 final 方法，意味着所有的子类都要遵循这个模板，首先 accept 方法前和后，visitor 都会做一些工作。真正的访问流程定义在 <code>accept0()</code> 方法里，而它是一个<strong>抽象方法</strong>。</p>
+<p>因此要知道 Druid 中是如何访问 AST 的，先拿 SQLSelectStatement 的 accept0() 方法来探探究竟。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">accept0</span><span style="color:#f92672">(</span>SQLASTVisitor visitor<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">visit</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+            acceptChild<span style="color:#f92672">(</span>visitor<span style="color:#f92672">,</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">select</span><span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+        visitor<span style="color:#f92672">.</span><span style="color:#a6e22e">endVisit</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>首先，使 visitor 访问自己，访问自己后，visitor 会决定是否还要访问自己的子元素。
+打开 <code>MySqlSchemaStateVisitor</code> 的 visit 方法，可以看到，visitor 做了一些事，初始化了自己的 aliasMap，然后 return true，这意味着还要访问 SQLSelectStatement 的子节点。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">visit</span><span style="color:#f92672">(</span>SQLSelectStatement x<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        setAliasMap<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>接下来访问子元素</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">acceptChild</span><span style="color:#f92672">(</span>SQLASTVisitor visitor<span style="color:#f92672">,</span> SQLObject child<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>child <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+
+        child<span style="color:#f92672">.</span><span style="color:#a6e22e">accept</span><span style="color:#f92672">(</span>visitor<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>由此可以看出，SQLObject 负责通知 visitor 要访问自己的哪些元素，而 visitor 则负责访问相应元素前，中，后三个过程的逻辑处理。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>768</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2017%2fdruid-sql-parser%2f&amp;appkey=&amp;title=Druid%20SQL%20%e8%a7%a3%e6%9e%90%e5%99%a8" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/jdbc4.2-spec-11/" class="prev" rel="prev" title="JDBC4.2规范-第十一章 连接池"><i class="iconfont icon-dajiantou"></i>&nbsp;JDBC4.2规范-第十一章 连接池</a>
+         
+        
+        <a href="/2017/redis-sort-explain/" class="next" rel="next" title="redis sort 命令详解">redis sort 命令详解&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2017-06-07 17:43:33 \u002b0800 CST',
+              title: 'Druid SQL 解析器',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    <link crossorigin="anonymous" integrity="sha384-yziQACfvCVwLqVFLqkWBYRO3XeA4EqzfXKGwaWnenYn5XzqfJFlFdKEmvutIQdKb" href="https://lib.baomitu.com/lightgallery/1.6.12/css/lightgallery.min.css" rel="stylesheet">
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

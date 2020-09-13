@@ -6,23 +6,31 @@
     <description>Recent content in 并发 on beanlam</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
-    <lastBuildDate>Sun, 06 Sep 2020 13:27:05 +0800</lastBuildDate>
+    <lastBuildDate>Wed, 12 Sep 2018 17:33:59 +0800</lastBuildDate>
     
 	<atom:link href="/categories/%E5%B9%B6%E5%8F%91/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>多线程与上下文切换</title>
-      <link>/2020/concurrency-context-switch/</link>
-      <pubDate>Sun, 06 Sep 2020 13:27:05 +0800</pubDate>
+      <title>操作系统同步原语</title>
+      <link>/2018/sync-primitive/</link>
+      <pubDate>Wed, 12 Sep 2018 17:33:59 +0800</pubDate>
       
-      <guid>/2020/concurrency-context-switch/</guid>
-      <description>CPU 上下文切换 一个支持多任务的操作系统，比如 Linux，它支持远大于 CPU 数量的任务同时运行。但是这些任务实际上并不是真的在同时运行，因为系统在很短的时间内，将 CPU 轮流分配给它们，所以给人一种多个任务同时在运行的感觉。
-CPU 准备运行一个任务时，需要知道这个任务从哪里开始运行，从哪里加载数据，因此需要操作系统提前帮这个任务设置好 程序计数器 和 CPU 寄存器。
- CPU 寄存器，是 CPU 内置的容量小、但速度极快的内存； 程序计数器，则是用来存储 CPU 正在执行的指令位置、或者即将执行的下一条指令位置。  CPU 强烈依赖这两个要素，来运行任务，这两个要素称之为 CPU 上下文。
-一次 system call 会导致两次 cpu context switch，Linux 按照特权等级，把进程的运行空间分为内核空间和用户空间，分别对应着下图中， CPU 特权等级的 Ring 0 和 Ring 3。
- 内核空间（Ring 0）具有最高权限，可以直接访问所有资源； 用户空间（Ring 3）只能访问受限资源，不能直接访问内存等硬件设备，必须通过系统调用陷入到内核中，才能访问这些特权资源。  假设一个 process 需要做文件读取操作，那么它需要进行 system call 从 user space 切换到 kernel space，这里会发生两次 cpu context switch
- 从用户态进入内核态 CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。 从内核态退回用户态 系统调用结束后，CPU寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。  进程上下文切换 由于进程的是由内核来管理和调度的，所以进程的切换只会发生在内核态，一个进程的状态分散在两个用户态和内核态。用户态主要保存了进程的虚拟内存、栈以及全局变量，内核态主要保存了进程的 CPU 上下文。</description>
+      <guid>/2018/sync-primitive/</guid>
+      <description>竞态条件 在一般的操作系统中，不同的进程可能会分享一块公共的存储区域，例如内存或者是硬盘上的文件，这些进程都允许在这些区域上进行读写。 操作系统有一些职责，来协调这些使用公共区域的进程之间以正确的方式进行想要的操作。这些进程之间需要通信，需要互相沟通，有商有量，才能保证一个进程的动作不会影响到另外一个进程正常的动作，进而导致进程运行后得不到期望的结果。在操作系统概念中，通常用 IPC（Inter Process Communication，即进程间通信）这个名词来代表多个进程之间的通信。 为了解释什么是竞态条件（race condition），我们引入一个简单的例子来说明： 一个文件中保存了一个数字 n，进程 A 和进程 B 都想要去读取这个文件的数字，并把这个数字加 1 后，保存回文件。假设 n 的初始值是 0，在我们理想的情况下，进程 A 和进程 B 运行后，文件中 n 的值应该为 2，但实际上可能会发生 n 的值为 1。我们可以考量一下，每个进程做这件事时，需要经过什么步骤：
+ 读取文件里 n 的值 令 n = n + 1 把新的 n 值保存回文件。  在进一步解释竞态条件之前，必须先回顾操作系统概念中的几个知识点：
+ 进程是可以并发运行的，即使只有一个 CPU 的时候） 操作系统的时钟中断会引起进程运行的重新调度， 除了时钟中断，来自其它设备的中断也会引起进程运行的重新调度  假设进程 A 在运行完步骤 1 和 2，但还没开始运行步骤 3 时，发生了一个时钟中断，这个时候操作系统通过调度，让进程 B 开始运行，进程 B 运行步骤 1 时，发现 n 的值为 0，于是它运行步骤 2 和 3，最终会把 n = 1 保存到文件中。之后进程 A 继续运行时，由于它并不知道在它运行步骤 3 之前，进程 B 已经修改了文件里的值，所以进程 A 也会把 n = 1 写回到文件中。这就是问题所在，进程 A 在运行的过程中，会有别的进程去操作它所操作的数据。</description>
+    </item>
+    
+    <item>
+      <title>线程安全实现与 CLH 队列</title>
+      <link>/2018/clh-queue/</link>
+      <pubDate>Wed, 05 Sep 2018 17:40:29 +0800</pubDate>
+      
+      <guid>/2018/clh-queue/</guid>
+      <description>阻塞同步 在 Java 中，我们经常使用 synchronized 关键字来做到互斥同步以解决多线程并发访问共享数据的问题。synchronzied 关键字在编译后，会在 synchronized 所包含的同步代码块前后分别加入 monitorenter 和 monitorexit 这两个字节码指令。synchronized 关键字需要指定一个对象来进行加锁和解锁。例如：
+public class Main { private static final Object LOCK = new Object(); public static void fun1() { synchronized (LOCK) { // do something  } } public static void fun2() { synchronized (LOCK) { // do something  } } } 在没有明确指定该对象时，根据 synchonized 修饰的是实例方法还是静态方法，从而决定是采用对象实例或者类的class实例作为所对象。例如：
+public class SynchronizedTest { public synchronized void doSomething() { //采用实例对象作为锁对象  } } public class SynchronizedTest { public static synchronized void doSomething() { //采用SynchronizedTest.</description>
     </item>
     
   </channel>

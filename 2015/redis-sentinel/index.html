@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2015/java-graph/" />
+  <link rel="next" href="/2017/jdbc4.2-spec-1/" />
+  <link rel="canonical" href="/2015/redis-sentinel/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           redis sentinel 机制与用法 | beanlam
+       
+  </title>
+  <meta name="title" content="redis sentinel 机制与用法 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="redis sentinel 机制与用法"/>
+<meta name="twitter:description" content="本文参考自《Redis Sentinel Documentation》
+ 概述 Redis-Sentinel是Redis官方推荐的高可用性(HA)解决方案，当用Redis做Master-slave的高可用方案时，假如master宕机了，Redis本身(包括它的很多客户端)都没有实现自动进行主备切换，而Redis-sentinel本身也是一个独立运行的进程，它能监控多个master-slave集群，发现master宕机后能进行自动切换。
+它的主要功能有以下几点
+ 不时地监控redis是否按照预期良好地运行; 如果发现某个redis节点运行出现状况，能够通知另外一个进程(例如它的客户端); 能够进行自动切换。  当一个master节点不可用时，能够选举出master的多个slave(如果有超过一个slave的话)中的一个来作为新的master，其它的slave节点会将它所追随的master的地址改为被提升为master的slave的新地址。
+Sentinel支持集群 很显然，只使用单个sentinel进程来监控redis集群是不可靠的，当sentinel进程宕掉后(sentinel本身也有单点问题，single-point-of-failure)整个集群系统将无法按照预期的方式运行。所以有必要将sentinel集群，这样有几个好处：
+ 即使有一些sentinel进程宕掉了，依然可以进行redis集群的主备切换； 如果只有一个sentinel进程，如果这个进程运行出错，或者是网络堵塞，那么将无法实现redis集群的主备切换（单点问题）; 如果有多个sentinel，redis的客户端可以随意地连接任意一个sentinel来获得关于redis集群中的信息。  Sentinel版本 Sentinel当前最新的稳定版本称为Sentinel 2(与之前的Sentinel 1区分开来）。随着redis2.8的安装包一起发行。安装完Redis2.8后，可以在**redis2.8/src/**里面找到Redis-sentinel的启动程序。
+ 强烈建议： 如果你使用的是redis2.6(sentinel版本为sentinel 1)，你最好应该使用redis2.8版本的sentinel 2，因为sentinel 1有很多的Bug，已经被官方弃用，所以强烈建议使用redis2.8以及sentinel 2。
+ 运行Sentinel 运行sentinel有两种方式：
+ 第一种  redis-sentinel /path/to/sentinel.conf  第二种  redis-server /path/to/sentinel.conf --sentinel 以上两种方式，都必须指定一个sentinel的配置文件sentinel.conf，如果不指定，将无法启动sentinel。sentinel默认监听26379端口，所以运行前必须确定该端口没有被别的进程占用。
+Sentinel的配置 Redis源码包中包含了一个sentinel.conf文件作为sentinel的配置文件，配置文件自带了关于各个配置项的解释。典型的配置项如下所示：
+sentinel monitor mymaster 127.0.0.1 6379 2 sentinel down-after-milliseconds mymaster 60000 sentinel failover-timeout mymaster 180000 sentinel parallel-syncs mymaster 1 sentinel monitor resque 192."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "redis sentinel 机制与用法",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2015\/redis-sentinel\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  508 ,
+  "url": "\/2015\/redis-sentinel\/",
+  "datePublished": "2015-04-17T22:08:56\u002b08:00",
+  "dateModified": "2015-04-17T22:08:56\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">redis sentinel 机制与用法</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2015-04-17 >17 April 2015</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/redis/"> redis </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                3 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <blockquote>
+<p>本文参考自<a href="http://redis.io/topics/sentinel">《Redis Sentinel Documentation》</a></p>
+</blockquote>
+<h1 id="概述">概述</h1>
+<p>Redis-Sentinel是Redis官方推荐的高可用性(HA)解决方案，当用Redis做Master-slave的高可用方案时，假如master宕机了，Redis本身(包括它的很多客户端)都没有实现自动进行主备切换，而Redis-sentinel本身也是一个独立运行的进程，它能监控多个master-slave集群，发现master宕机后能进行自动切换。</p>
+<p>它的主要功能有以下几点</p>
+<ul>
+<li>不时地监控redis是否按照预期良好地运行;</li>
+<li>如果发现某个redis节点运行出现状况，能够通知另外一个进程(例如它的客户端);</li>
+<li>能够进行自动切换。</li>
+</ul>
+<p>当一个master节点不可用时，能够选举出master的多个slave(如果有超过一个slave的话)中的一个来作为新的master，其它的slave节点会将它所追随的master的地址改为被提升为master的slave的新地址。</p>
+<h1 id="sentinel支持集群">Sentinel支持集群</h1>
+<p>很显然，只使用单个sentinel进程来监控redis集群是不可靠的，当sentinel进程宕掉后(sentinel本身也有单点问题，single-point-of-failure)整个集群系统将无法按照预期的方式运行。所以有必要将sentinel集群，这样有几个好处：</p>
+<ul>
+<li>即使有一些sentinel进程宕掉了，依然可以进行redis集群的主备切换；</li>
+<li>如果只有一个sentinel进程，如果这个进程运行出错，或者是网络堵塞，那么将无法实现redis集群的主备切换（单点问题）;</li>
+<li>如果有多个sentinel，redis的客户端可以随意地连接任意一个sentinel来获得关于redis集群中的信息。</li>
+</ul>
+<h1 id="sentinel版本">Sentinel版本</h1>
+<p>Sentinel当前最新的稳定版本称为<strong>Sentinel 2</strong>(与之前的<strong>Sentinel 1</strong>区分开来）。随着redis2.8的安装包一起发行。安装完Redis2.8后，可以在**redis2.8/src/**里面找到Redis-sentinel的启动程序。</p>
+<blockquote>
+<p><em><strong>强烈建议</strong></em>：
+如果你使用的是redis2.6(sentinel版本为<strong>sentinel 1</strong>)，你最好应该使用redis2.8版本的<strong>sentinel 2</strong>，因为sentinel 1有很多的Bug，已经被官方弃用，所以强烈建议使用redis2.8以及sentinel 2。</p>
+</blockquote>
+<h1 id="运行sentinel">运行Sentinel</h1>
+<p>运行sentinel有两种方式：</p>
+<ul>
+<li>第一种</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">redis-sentinel /path/to/sentinel.conf
+</code></pre></div><ul>
+<li>第二种</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">redis-server /path/to/sentinel.conf --sentinel
+</code></pre></div><p>以上两种方式，都必须指定一个sentinel的配置文件sentinel.conf，如果不指定，将无法启动sentinel。sentinel默认监听26379端口，所以运行前必须确定该端口没有被别的进程占用。</p>
+<h1 id="sentinel的配置">Sentinel的配置</h1>
+<p>Redis源码包中包含了一个sentinel.conf文件作为sentinel的配置文件，配置文件自带了关于各个配置项的解释。典型的配置项如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    sentinel monitor mymaster 127.0.0.1 <span style="color:#ae81ff">6379</span> <span style="color:#ae81ff">2</span>
+    sentinel down-after-milliseconds mymaster <span style="color:#ae81ff">60000</span>
+    sentinel failover-timeout mymaster <span style="color:#ae81ff">180000</span>
+    sentinel parallel-syncs mymaster <span style="color:#ae81ff">1</span>
+
+    sentinel monitor resque 192.168.1.3 <span style="color:#ae81ff">6380</span> <span style="color:#ae81ff">4</span>
+    sentinel down-after-milliseconds resque <span style="color:#ae81ff">10000</span>
+    sentinel failover-timeout resque <span style="color:#ae81ff">180000</span>
+    sentinel parallel-syncs resque <span style="color:#ae81ff">5</span>
+</code></pre></div><p>上面的配置项配置了两个名字分别为mymaster和resque的master，配置文件只需要配置master的信息就好啦，不用配置slave的信息，因为slave能够被自动检测到(master节点会有关于slave的消息)。需要注意的是，配置文件在sentinel运行期间是会被动态修改的，例如当发生主备切换时候，配置文件中的master会被修改为另外一个slave。这样，之后sentinel如果重启时，就可以根据这个配置来恢复其之前所监控的redis集群的状态。</p>
+<p><strong>接下来我们将一行一行地解释上面的配置项</strong>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    sentinel monitor mymaster 127.0.0.1 <span style="color:#ae81ff">6379</span> <span style="color:#ae81ff">2</span>
+</code></pre></div><p>这一行代表sentinel监控的master的名字叫做<strong>mymaster</strong>,地址为<strong>127.0.0.1:6379</strong>，行尾最后的一个<strong>2</strong>代表什么意思呢？我们知道，网络是不可靠的，有时候一个sentinel会因为网络堵塞而误以为一个master redis已经死掉了，当sentinel集群式，解决这个问题的方法就变得很简单，只需要多个sentinel互相沟通来确认某个master是否真的死了，这个<strong>2</strong>代表，当集群中有2个sentinel认为master死了时，才能真正认为该master已经不可用了。（sentinel集群中各个sentinel也有互相通信，通过gossip协议）。</p>
+<p>除了第一行配置，我们发现剩下的配置都有一个统一的格式:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    sentinel &lt;option_name&gt; &lt;master_name&gt; &lt;option_value&gt;
+</code></pre></div><p>接下来我们根据上面格式中的<strong>option_name</strong>一个一个来解释这些配置项：</p>
+<ul>
+<li><strong>down-after-milliseconds</strong>
+sentinel会向master发送心跳<em><strong>PING</strong></em>来确认master是否存活，如果master在**“一定时间范围”**内不回应***PONG*** 或者是回复了一个错误消息，那么这个sentinel会**主观地**(单方面地)认为这个master已经不可用了(subjectively down, 也简称为SDOWN)。而这个down-after-milliseconds就是用来指定这个**“一定时间范围”**的，单位是毫秒。</li>
+</ul>
+<blockquote>
+<p>不过需要注意的是，这个时候sentinel并不会马上进行failover主备切换，这个sentinel还需要参考sentinel集群中其他sentinel的意见，如果超过某个数量的sentinel也<strong>主观地</strong>认为该master死了，那么这个master就会被<strong>客观地</strong>(注意哦，这次不是主观，是客观，与刚才的subjectively down相对，这次是objectively down，简称为ODOWN)认为已经死了。需要一起做出决定的sentinel数量在上一条配置中进行配置。</p>
+</blockquote>
+<ul>
+<li><strong>parallel-syncs</strong>
+在发生failover主备切换时，这个选项指定了最多可以有多少个slave同时对新的master进行同步，这个数字越小，完成failover所需的时间就越长，但是如果这个数字越大，就意味着越多的slave因为replication而不可用。可以通过将这个值设为 1 来保证每次只有一个slave处于不能处理命令请求的状态。</li>
+</ul>
+<p>其他配置项在sentinel.conf中都有很详细的解释。
+所有的配置都可以在运行时用命令<code>SENTINEL SET command</code>动态修改。</p>
+<h1 id="sentinel的仲裁会">Sentinel的“仲裁会”</h1>
+<p>前面我们谈到，当一个master被sentinel集群监控时，需要为它指定一个参数，这个参数指定了当需要判决master为不可用，并且进行failover时，所需要的sentinel数量，本文中我们暂时称这个参数为<strong>票数</strong></p>
+<p>不过，当failover主备切换真正被触发后，failover并不会马上进行，还需要sentinel中的<strong>大多数</strong>sentinel授权后才可以进行failover。
+当ODOWN时，failover被触发。failover一旦被触发，尝试去进行failover的sentinel会去获得“大多数”sentinel的授权（如果票数比大多数还要大的时候，则询问更多的sentinel)
+这个区别看起来很微妙，但是很容易理解和使用。例如，集群中有5个sentinel，票数被设置为2，当2个sentinel认为一个master已经不可用了以后，将会触发failover，但是，进行failover的那个sentinel必须先获得至少3个sentinel的授权才可以实行failover。
+如果票数被设置为5，要达到ODOWN状态，必须所有5个sentinel都主观认为master为不可用，要进行failover，那么得获得所有5个sentinel的授权。</p>
+<h1 id="配置版本号">配置版本号</h1>
+<p>为什么要先获得<strong>大多数</strong>sentinel的认可时才能真正去执行failover呢？</p>
+<p>当一个sentinel被授权后，它将会获得宕掉的master的一份最新配置版本号，当failover执行结束以后，这个版本号将会被用于最新的配置。因为<strong>大多数</strong>sentinel都已经知道该版本号已经被要执行failover的sentinel拿走了，所以其他的sentinel都不能再去使用这个版本号。这意味着，每次failover都会附带有一个独一无二的版本号。我们将会看到这样做的重要性。</p>
+<p>而且，sentinel集群都遵守一个规则：如果sentinel A推荐sentinel B去执行failover，B会等待一段时间后，自行再次去对同一个master执行failover，这个等待的时间是通过<code>failover-timeout</code>配置项去配置的。从这个规则可以看出，sentinel集群中的sentinel不会再同一时刻并发去failover同一个master，第一个进行failover的sentinel如果失败了，另外一个将会在一定时间内进行重新进行failover，以此类推。</p>
+<p>redis sentinel保证了活跃性：如果<strong>大多数</strong>sentinel能够互相通信，最终将会有一个被授权去进行failover.
+redis sentinel也保证了安全性：每个试图去failover同一个master的sentinel都会得到一个独一无二的版本号。</p>
+<h1 id="配置传播">配置传播</h1>
+<p>一旦一个sentinel成功地对一个master进行了failover，它将会把关于master的最新配置通过广播形式通知其它sentinel，其它的sentinel则更新对应master的配置。</p>
+<p>一个faiover要想被成功实行，sentinel必须能够向选为master的slave发送<code>SLAVE OF NO ONE</code>命令，然后能够通过<code>INFO</code>命令看到新master的配置信息。</p>
+<p>当将一个slave选举为master并发送<code>SLAVE OF NO ONE</code>后，即使其它的slave还没针对新master重新配置自己，failover也被认为是成功了的，然后所有sentinels将会发布新的配置信息。</p>
+<p>新配在集群中相互传播的方式，就是为什么我们需要当一个sentinel进行failover时必须被授权一个版本号的原因。</p>
+<p>每个sentinel使用<strong>发布/订阅</strong>的方式持续地传播master的配置版本信息，配置传播的<strong>发布/订阅</strong>管道是：<code>__sentinel__:hello</code>。</p>
+<p>因为每一个配置都有一个版本号，所以以版本号最大的那个为标准。</p>
+<p>举个栗子：假设有一个名为mymaster的地址为192.168.1.50:6379。一开始，集群中所有的sentinel都知道这个地址，于是为mymaster的配置打上版本号1。一段时候后mymaster死了，有一个sentinel被授权用版本号2对其进行failover。如果failover成功了，假设地址改为了192.168.1.50:9000，此时配置的版本号为2，进行failover的sentinel会将新配置广播给其他的sentinel，由于其他sentinel维护的版本号为1，发现新配置的版本号为2时，版本号变大了，说明配置更新了，于是就会采用最新的版本号为2的配置。</p>
+<p>这意味着sentinel集群保证了第二种活跃性：一个能够互相通信的sentinel集群最终会采用版本号最高且相同的配置。</p>
+<h1 id="sdown和odown的更多细节">SDOWN和ODOWN的更多细节</h1>
+<p>sentinel对于<strong>不可用</strong>有两种不同的看法，一个叫<strong>主观不可用</strong>(SDOWN),另外一个叫<strong>客观不可用</strong>(ODOWN)。SDOWN是sentinel自己主观上检测到的关于master的状态，ODOWN需要一定数量的sentinel达成一致意见才能认为一个master客观上已经宕掉，各个sentinel之间通过命令<code>SENTINEL is_master_down_by_addr</code>来获得其它sentinel对master的检测结果。</p>
+<p>从sentinel的角度来看，如果发送了<em><strong>PING</strong></em>心跳后，在一定时间内没有收到合法的回复，就达到了SDOWN的条件。这个时间在配置中通过<code>is-master-down-after-milliseconds</code>参数配置。</p>
+<p>当sentinel发送<em><strong>PING</strong></em>后，以下回复之一都被认为是合法的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    PING replied with +PONG.
+    PING replied with -LOADING error.
+    PING replied with -MASTERDOWN error.
+</code></pre></div><p>其它任何回复（或者根本没有回复）都是不合法的。</p>
+<p>从SDOWN切换到ODOWN不需要任何一致性算法，只需要一个gossip协议：如果一个sentinel收到了足够多的sentinel发来消息告诉它某个master已经down掉了，SDOWN状态就会变成ODOWN状态。如果之后master可用了，这个状态就会相应地被清理掉。</p>
+<p>正如之前已经解释过了，真正进行failover需要一个授权的过程，但是所有的failover都开始于一个ODOWN状态。</p>
+<p>ODOWN状态只适用于master，对于不是master的redis节点sentinel之间不需要任何协商，slaves和sentinel不会有ODOWN状态。</p>
+<h1 id="sentinel之间和slaves之间的自动发现机制">Sentinel之间和Slaves之间的自动发现机制</h1>
+<p>虽然sentinel集群中各个sentinel都互相连接彼此来检查对方的可用性以及互相发送消息。但是你不用在任何一个sentinel配置任何其它的sentinel的节点。因为sentinel利用了master的<strong>发布/订阅</strong>机制去自动发现其它也监控了统一master的sentinel节点。</p>
+<p>通过向名为<code>__sentinel__:hello</code>的管道中发送消息来实现。</p>
+<p>同样，你也不需要在sentinel中配置某个master的所有slave的地址，sentinel会通过询问master来得到这些slave的地址的。</p>
+<p>每个sentinel通过向每个master和slave的<strong>发布/订阅</strong>频道<code>__sentinel__:hello</code>每秒发送一次消息，来宣布它的存在。
+每个sentinel也订阅了每个master和slave的频道<code>__sentinel__:hello</code>的内容，来发现未知的sentinel，当检测到了新的sentinel，则将其加入到自身维护的master监控列表中。
+每个sentinel发送的消息中也包含了其当前维护的最新的master配置。如果某个sentinel发现
+自己的配置版本低于接收到的配置版本，则会用新的配置更新自己的master配置。</p>
+<p>在为一个master添加一个新的sentinel前，sentinel总是检查是否已经有sentinel与新的sentinel的进程号或者是地址是一样的。如果是那样，这个sentinel将会被删除，而把新的sentinel添加上去。</p>
+<h1 id="网络隔离时的一致性">网络隔离时的一致性</h1>
+<p>redis sentinel集群的配置的一致性模型为最终一致性，集群中每个sentinel最终都会采用最高版本的配置。然而，在实际的应用环境中，有三个不同的角色会与sentinel打交道：</p>
+<ul>
+<li>Redis实例.</li>
+<li>Sentinel实例.</li>
+<li>客户端.</li>
+</ul>
+<p>为了考察整个系统的行为我们必须同时考虑到这三个角色。</p>
+<p>下面有个简单的例子，有三个主机，每个主机分别运行一个redis和一个sentinel:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">             +-------------+
+             | Sentinel <span style="color:#ae81ff">1</span>  | &lt;--- Client A
+             | Redis <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span>M<span style="color:#f92672">)</span> |
+             +-------------+
+                     |
+                     |
+ +-------------+     |                     +------------+
+ | Sentinel <span style="color:#ae81ff">2</span>  |-----+-- / partition / ----| Sentinel <span style="color:#ae81ff">3</span> | &lt;--- Client B
+ | Redis <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span>S<span style="color:#f92672">)</span> |                           | Redis <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span>M<span style="color:#f92672">)</span>|
+ +-------------+                           +------------+
+</code></pre></div><p>在这个系统中，初始状态下redis3是master, redis1和redis2是slave。之后redis3所在的主机网络不可用了，sentinel1和sentinel2启动了failover并把redis1选举为master。</p>
+<p>Sentinel集群的特性保证了sentinel1和sentinel2得到了关于master的最新配置。但是sentinel3依然持着的是就的配置，因为它与外界隔离了。</p>
+<p>当网络恢复以后，我们知道sentinel3将会更新它的配置。但是，如果客户端所连接的master被网络隔离，会发生什么呢？</p>
+<p>客户端将依然可以向redis3写数据，但是当网络恢复后，redis3就会变成redis的一个slave，那么，在网络隔离期间，客户端向redis3写的数据将会丢失。</p>
+<p>也许你不会希望这个场景发生：</p>
+<ul>
+<li>如果你把redis当做缓存来使用，那么你也许能容忍这部分数据的丢失。</li>
+<li>但如果你把redis当做一个存储系统来使用，你也许就无法容忍这部分数据的丢失了。</li>
+</ul>
+<p>因为redis采用的是异步复制，在这样的场景下，没有办法避免数据的丢失。然而，你可以通过以下配置来配置redis3和redis1，使得数据不会丢失。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">min-slaves-to-write <span style="color:#ae81ff">1</span>
+min-slaves-max-lag <span style="color:#ae81ff">10</span>
+</code></pre></div><p>通过上面的配置，当一个redis是master时，如果它不能向至少一个slave写数据(<strong>上面的min-slaves-to-write</strong>指定了slave的数量)，它将会拒绝接受客户端的写请求。由于复制是异步的，master无法向slave写数据意味着slave要么断开连接了，要么不在指定时间内向master发送同步数据的请求了(上面的<strong>min-slaves-max-lag</strong>指定了这个时间)。</p>
+<h1 id="sentinel状态持久化">Sentinel状态持久化</h1>
+<p>snetinel的状态会被持久化地写入sentinel的配置文件中。每次当收到一个新的配置时，或者新创建一个配置时，配置会被持久化到硬盘中，并带上配置的版本戳。这意味着，可以安全的停止和重启sentinel进程。</p>
+<h1 id="无failover时的配置纠正">无failover时的配置纠正</h1>
+<p>即使当前没有failover正在进行，sentinel依然会使用当前配置去设置监控的master。特别是：</p>
+<ul>
+<li>根据最新配置确认为slaves的节点却声称自己是master(参考上文例子中被网络隔离后的的redis3)，这时它们会被重新配置为当前master的slave。</li>
+<li>如果slaves连接了一个错误的master，将会被改正过来，连接到正确的master。</li>
+</ul>
+<h1 id="slave选举与优先级">Slave选举与优先级</h1>
+<p>当一个sentinel准备好了要进行failover，并且收到了其他sentinel的授权，那么就需要选举出一个合适的slave来做为新的master。</p>
+<p>slave的选举主要会评估slave的以下几个方面：</p>
+<ul>
+<li>与master断开连接的次数</li>
+<li>Slave的优先级</li>
+<li>数据复制的下标(用来评估slave当前拥有多少master的数据)</li>
+<li>进程ID</li>
+</ul>
+<p>如果一个slave与master失去联系超过10次，并且每次都超过了配置的最大失联时间(<code>down-after-millisecondsoption</code>)，并且，如果sentinel在进行failover时发现slave失联，那么这个slave就会被sentinel认为不适合用来做新master的。</p>
+<p>更严格的定义是，如果一个slave持续断开连接的时间超过</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">(</span>down-after-milliseconds * 10<span style="color:#f92672">)</span> + milliseconds_since_master_is_in_SDOWN_state
+</code></pre></div><p>就会被认为失去选举资格。
+符合上述条件的slave才会被列入master候选人列表，并根据以下顺序来进行排序：</p>
+<ol>
+<li>sentinel首先会根据slaves的优先级来进行排序，优先级越小排名越靠前（？）。</li>
+<li>如果优先级相同，则查看复制的下标，哪个从master接收的复制数据多，哪个就靠前。</li>
+<li>如果优先级和下标都相同，就选择进程ID较小的那个。</li>
+</ol>
+<p>一个redis无论是master还是slave，都必须在配置中指定一个slave优先级。要注意到master也是有可能通过failover变成slave的。</p>
+<p>如果一个redis的slave优先级配置为0，那么它将永远不会被选为master。但是它依然会从master哪里复制数据。</p>
+<h1 id="sentinel和redis身份验证">Sentinel和Redis身份验证</h1>
+<p>当一个master配置为需要密码才能连接时，客户端和slave在连接时都需要提供密码。</p>
+<p>master通过<code>requirepass</code>设置自身的密码，不提供密码无法连接到这个master。
+slave通过<code>masterauth</code>来设置访问master时的密码。</p>
+<p>但是当使用了sentinel时，由于一个master可能会变成一个slave，一个slave也可能会变成master，所以需要同时设置上述两个配置项。</p>
+<h1 id="sentinel-api">Sentinel API</h1>
+<p>Sentinel默认运行在26379端口上，sentinel支持redis协议，所以可以使用redis-cli客户端或者其他可用的客户端来与sentinel通信。</p>
+<p>有两种方式能够与sentinel通信：</p>
+<ul>
+<li>一种是直接使用客户端向它发消息</li>
+<li>另外一种是使用<strong>发布/订阅</strong>模式来订阅sentinel事件，比如说failover，或者某个redis实例运行出错，等等。</li>
+</ul>
+<h1 id="sentinel命令">Sentinel命令</h1>
+<p>sentinel支持的合法命令如下：</p>
+<ul>
+<li><code>PING</code> sentinel回复<code>PONG</code>.</li>
+<li><code>SENTINEL masters</code> 显示被监控的所有master以及它们的状态.</li>
+<li><code>SENTINEL master &lt;master name&gt;</code> 显示指定master的信息和状态；</li>
+<li><code>SENTINEL slaves &lt;master name&gt;</code> 显示指定master的所有slave以及它们的状态；</li>
+<li><code>SENTINEL get-master-addr-by-name &lt;master name&gt;</code> 返回指定master的ip和端口，如果正在进行failover或者failover已经完成，将会显示被提升为master的slave的ip和端口。</li>
+<li><code>SENTINEL reset &lt;pattern&gt;</code> 重置名字匹配该正则表达式的所有的master的状态信息，清楚其之前的状态信息，以及slaves信息。</li>
+<li><code>SENTINEL failover &lt;master name&gt;</code> 强制sentinel执行failover，并且不需要得到其他sentinel的同意。但是failover后会将最新的配置发送给其他sentinel。</li>
+</ul>
+<h2 id="动态修改sentinel配置">动态修改Sentinel配置</h2>
+<p>从redis2.8.4开始，sentinel提供了一组API用来添加，删除，修改master的配置。</p>
+<blockquote>
+<p>需要注意的是，如果你通过API修改了一个sentinel的配置，sentinel不会把修改的配置告诉其他sentinel。你需要自己手动地对多个sentinel发送修改配置的命令。</p>
+</blockquote>
+<p>以下是一些修改sentinel配置的命令：</p>
+<ul>
+<li><code>SENTINEL MONITOR &lt;name&gt; &lt;ip&gt; &lt;port&gt; &lt;quorum&gt;</code> 这个命令告诉sentinel去监听一个新的master</li>
+<li><code>SENTINEL REMOVE &lt;name&gt;</code> 命令sentinel放弃对某个master的监听</li>
+<li><code>SENTINEL SET &lt;name&gt; &lt;option&gt; &lt;value&gt;</code> 这个命令很像Redis的<code>CONFIG SET</code>命令，用来改变指定master的配置。支持多个<!-- raw HTML omitted --><!-- raw HTML omitted -->。例如以下实例：</li>
+<li><code>SENTINEL SET objects-cache-master down-after-milliseconds 1000</code></li>
+</ul>
+<p>只要是配置文件中存在的配置项，都可以用<code>SENTINEL SET</code>命令来设置。这个还可以用来设置master的属性，比如说quorum(票数)，而不需要先删除master，再重新添加master。例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">SENTINEL SET objects-cache-master quorum <span style="color:#ae81ff">5</span>
+</code></pre></div><h2 id="增加或删除sentinel">增加或删除Sentinel</h2>
+<p>由于有sentinel自动发现机制，所以添加一个sentinel到你的集群中非常容易，你所需要做的只是监控到某个Master上，然后新添加的sentinel就能获得其他sentinel的信息以及masterd所有的slave。</p>
+<p>如果你需要添加多个sentinel，建议你一个接着一个添加，这样可以预防网络隔离带来的问题。你可以每个30秒添加一个sentinel。最后你可以用<code>SENTINEL MASTER mastername</code>来检查一下是否所有的sentinel都已经监控到了master。</p>
+<p>删除一个sentinel显得有点复杂：因为sentinel永远不会删除一个已经存在过的sentinel，即使它已经与组织失去联系很久了。
+要想删除一个sentinel，应该遵循如下步骤：</p>
+<ol>
+<li>停止所要删除的sentinel</li>
+<li>发送一个<code>SENTINEL RESET * </code>命令给所有其它的sentinel实例，如果你想要重置指定master上面的sentinel，只需要把*号改为特定的名字，注意，需要一个接一个发，每次发送的间隔不低于30秒。</li>
+<li>检查一下所有的sentinels是否都有一致的当前sentinel数。使用<code>SENTINEL MASTER mastername</code> 来查询。</li>
+</ol>
+<h2 id="删除旧master或者不可达slave">删除旧master或者不可达slave</h2>
+<p>sentinel永远会记录好一个Master的slaves，即使slave已经与组织失联好久了。这是很有用的，因为sentinel集群必须有能力把一个恢复可用的slave进行重新配置。</p>
+<p>并且，failover后，失效的master将会被标记为新master的一个slave，这样的话，当它变得可用时，就会从新master上复制数据。</p>
+<p>然后，有时候你想要永久地删除掉一个slave(有可能它曾经是个master)，你只需要发送一个<code>SENTINEL RESET master</code>命令给所有的sentinels，它们将会更新列表里能够正确地复制master数据的slave。</p>
+<h2 id="发布订阅">发布/订阅</h2>
+<p>客户端可以向一个sentinel发送订阅某个频道的事件的命令，当有特定的事件发生时，sentinel会通知所有订阅的客户端。需要注意的是客户端只能订阅，不能发布。</p>
+<p>订阅频道的名字与事件的名字一致。例如，频道名为<strong>sdown</strong> 将会发布所有与SDOWN相关的消息给订阅者。</p>
+<p>如果想要订阅所有消息，只需简单地使用<code>PSUBSCRIBE * </code></p>
+<p>以下是所有你可以收到的消息的消息格式，如果你订阅了所有消息的话。第一个单词是频道的名字，其它是数据的格式。</p>
+<p>注意：以下的instance details的格式是：</p>
+<p><!-- raw HTML omitted --> <!-- raw HTML omitted --> <!-- raw HTML omitted --> <!-- raw HTML omitted --> @ <!-- raw HTML omitted --> <!-- raw HTML omitted --> <!-- raw HTML omitted --></p>
+<p>如果这个redis实例是一个master，那么@之后的消息就不会显示。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    +reset-master &lt;instance details&gt; -- 当master被重置时.
+    +slave &lt;instance details&gt; -- 当检测到一个slave并添加进slave列表时.
+    +failover-state-reconf-slaves &lt;instance details&gt; -- Failover状态变为reconf-slaves状态时
+    +failover-detected &lt;instance details&gt; -- 当failover发生时
+    +slave-reconf-sent &lt;instance details&gt; -- sentinel发送SLAVEOF命令把它重新配置时
+    +slave-reconf-inprog &lt;instance details&gt; -- slave被重新配置为另外一个master的slave，但数据复制还未发生时。
+    +slave-reconf-done &lt;instance details&gt; -- slave被重新配置为另外一个master的slave并且数据复制已经与master同步时。
+    -dup-sentinel &lt;instance details&gt; -- 删除指定master上的冗余sentinel时 <span style="color:#f92672">(</span>当一个sentinel重新启动时，可能会发生这个事件<span style="color:#f92672">)</span>.
+    +sentinel &lt;instance details&gt; -- 当master增加了一个sentinel时。
+    +sdown &lt;instance details&gt; -- 进入SDOWN状态时;
+    -sdown &lt;instance details&gt; -- 离开SDOWN状态时。
+    +odown &lt;instance details&gt; -- 进入ODOWN状态时。
+    -odown &lt;instance details&gt; -- 离开ODOWN状态时。
+    +new-epoch &lt;instance details&gt; -- 当前配置版本被更新时。
+    +try-failover &lt;instance details&gt; -- 达到failover条件，正等待其他sentinel的选举。
+    +elected-leader &lt;instance details&gt; -- 被选举为去执行failover的时候。
+    +failover-state-select-slave &lt;instance details&gt; -- 开始要选择一个slave当选新master时。
+    no-good-slave &lt;instance details&gt; -- 没有合适的slave来担当新master
+    selected-slave &lt;instance details&gt; -- 找到了一个适合的slave来担当新master
+    failover-state-send-slaveof-noone &lt;instance details&gt; -- 当把选择为新master的slave的身份进行切换的时候。
+    failover-end-for-timeout &lt;instance details&gt; -- failover由于超时而失败时。
+    failover-end &lt;instance details&gt; -- failover成功完成时。
+    switch-master &lt;master name&gt; &lt;oldip&gt; &lt;oldport&gt; &lt;newip&gt; &lt;newport&gt; -- 当master的地址发生变化时。通常这是客户端最感兴趣的消息了。
+    +tilt -- 进入Tilt模式。
+    -tilt -- 退出Tilt模式。
+</code></pre></div><h2 id="tilt-模式">TILT 模式</h2>
+<p>redis sentinel非常依赖系统时间，例如它会使用系统时间来判断一个PING回复用了多久的时间。
+然而，假如系统时间被修改了，或者是系统十分繁忙，或者是进程堵塞了，sentinel可能会出现运行不正常的情况。
+当系统的稳定性下降时，TILT模式是sentinel可以进入的一种的保护模式。当进入TILT模式时，sentinel会继续监控工作，但是它不会有任何其他动作，它也不会去回应<code>is-master-down-by-addr</code>这样的命令了，因为它在TILT模式下，检测失效节点的能力已经变得让人不可信任了。
+如果系统恢复正常，持续30秒钟，sentinel就会退出TITL模式。</p>
+<h2 id="-busy状态">-BUSY状态</h2>
+<blockquote>
+<p>注意：该功能还未实现。</p>
+</blockquote>
+<p>当一个脚本的运行时间超过配置的运行时间时，sentinel会返回一个-BUSY 错误信号。如果这件事发生在触发一个failover之前，sentinel将会发送一个SCRIPT KILL命令，如果script是只读的话，就能成功执行。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>508</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2015%2fredis-sentinel%2f&amp;appkey=&amp;title=redis%20sentinel%20%e6%9c%ba%e5%88%b6%e4%b8%8e%e7%94%a8%e6%b3%95" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2015/java-graph/" class="prev" rel="prev" title="图与其Java实现"><i class="iconfont icon-dajiantou"></i>&nbsp;图与其Java实现</a>
+         
+        
+        <a href="/2017/jdbc4.2-spec-1/" class="next" rel="next" title="JDBC4.2规范-第一章 简介">JDBC4.2规范-第一章 简介&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2015-04-17 22:08:56 \u002b0800 CST',
+              title: 'redis sentinel 机制与用法',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

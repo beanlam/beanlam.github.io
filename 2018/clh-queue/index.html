@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="/2017/redis-sort-explain/" />
+  <link rel="next" href="/2018/sync-primitive/" />
+  <link rel="canonical" href="/2018/clh-queue/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           线程安全实现与 CLH 队列 | beanlam
+       
+  </title>
+  <meta name="title" content="线程安全实现与 CLH 队列 | beanlam">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="线程安全实现与 CLH 队列"/>
+<meta name="twitter:description" content="阻塞同步 在 Java 中，我们经常使用 synchronized 关键字来做到互斥同步以解决多线程并发访问共享数据的问题。synchronzied 关键字在编译后，会在 synchronized 所包含的同步代码块前后分别加入 monitorenter 和 monitorexit 这两个字节码指令。synchronized 关键字需要指定一个对象来进行加锁和解锁。例如：
+public class Main { private static final Object LOCK = new Object(); public static void fun1() { synchronized (LOCK) { // do something  } } public static void fun2() { synchronized (LOCK) { // do something  } } } 在没有明确指定该对象时，根据 synchonized 修饰的是实例方法还是静态方法，从而决定是采用对象实例或者类的class实例作为所对象。例如：
+public class SynchronizedTest { public synchronized void doSomething() { //采用实例对象作为锁对象  } } public class SynchronizedTest { public static synchronized void doSomething() { //采用SynchronizedTest."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "线程安全实现与 CLH 队列",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\/2018\/clh-queue\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "images\/me\/avatar.jpg",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  558 ,
+  "url": "\/2018\/clh-queue\/",
+  "datePublished": "2018-09-05T17:40:29\u002b08:00",
+  "dateModified": "2018-09-05T17:40:29\u002b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "beanlam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "images\/me\/avatar.jpg",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "beanlam"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="/">beanlam</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="">beanlam</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">posts</a>
+                
+                <a class="menu-item" href="/categories/" title="">categories</a>
+                
+                <a class="menu-item" href="/about" title="">about</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">线程安全实现与 CLH 队列</h1>
+        <div class="post-meta">
+            本文 由 <a href="" rel="author">beanlam</a> 用一粒心 ♥ 
+                <span class="post-time">
+                    写于 <time datetime=2018-09-05 >5 September 2018</time>
+                </span>
+                分类为
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="/categories/%E5%B9%B6%E5%8F%91/"> 并发 </a>
+                        
+                </span>
+                <i class="iconfont icon-timer"></i>
+                3 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h1 id="阻塞同步">阻塞同步</h1>
+<p>在 Java 中，我们经常使用 synchronized 关键字来做到互斥同步以解决多线程并发访问共享数据的问题。synchronzied 关键字在编译后，会在 synchronized 所包含的同步代码块前后分别加入 monitorenter 和 monitorexit 这两个字节码指令。synchronized 关键字需要指定一个对象来进行加锁和解锁。例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Main</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Object LOCK <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
+    
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>LOCK<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// do something
+</span><span style="color:#75715e"></span>        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fun2</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>LOCK<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// do something
+</span><span style="color:#75715e"></span>        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>在没有明确指定该对象时，根据 synchonized 修饰的是实例方法还是静态方法，从而决定是采用对象实例或者类的class实例作为所对象。例如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SynchronizedTest</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doSomething</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">//采用实例对象作为锁对象
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SynchronizedTest</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doSomething</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">//采用SynchronizedTest.class 实例作为锁对象
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>由于基于 synchronized 实现的阻塞互斥，除了需要阻塞操作线程，而且唤醒或者阻塞操作系统级别的原生线程，需要从用户态转换到内核态中，这个状态的转换消耗的时间可能比用户代码执行的时间还要长，因此我们经常说 synchronized 是 Java 语言中的 “重量级锁”。</p>
+<h1 id="非阻塞同步">非阻塞同步</h1>
+<h2 id="乐观锁与悲观锁">乐观锁与悲观锁</h2>
+<p>使用 synchronized 关键字的同步方式最主要的问题就是进行线程阻塞和唤醒时所带来的的性能消耗问题。阻塞同步属于悲观的并发策略，只要有可能出现竞争，它都认为一定要加锁。
+然而同步策略还有另外一种乐观的策略，乐观并发策略先进性对数据的操作，如果没有发现其它线程也操作了数据，那么就认为这个操作是成功的。如果发生了其它线程也操作了数据，那么一般采取不断重试的手段，直到成功为止，这种乐观锁的策略，不需要把线程阻塞，属于非阻塞同步的一种手段。</p>
+<h2 id="cas">CAS</h2>
+<p>乐观并发策略主要有两个重要的阶段，一个是对数据进行操作，另外一个是进行冲突的检测，即检测其它线程有无同时也对该数据进行了操作。这里的数据操作和冲突检测需要具备<strong>原子性</strong>，否则就容易出现类似于 i++ 的问题。
+CAS 的含义为 compare and swap，目前绝大多数 CPU 都原生支持 CAS 原子指令，例如在 IA64、x86的指令集中，就有 cmpxchg 这样的指令来完成 CAS 功能，它的原子性要求是在硬件层面上得到保证的。
+CAS 指令一般需要有三个参数，分别是值的内存地址、期望中的旧值和新值。CAS 指令执行时，如果该内存地址上的值符合期望中的旧值，处理器会用新值更新该内存地址上的值，否则就不更新。这个操作在 CPU 内部保证了是原子性的。
+在 Java 中有许多 CAS 相关的 API，我们常见的有 <code>java.util.concurrent</code> 包下的各种原子类，例如<code>AtomicInteger</code>，<code>AtomicReference</code>等等。
+这些类都支持 CAS 操作，其内部实际上也依赖于 <code>sun.misc.Unsafe</code> 这个类里的 compareAndSwapInt() 和 compareAndSwapLong() 方法。
+CAS 并非是完美无缺的，尽管它能保证原子性，但它存在一个著名的 <strong>ABA</strong> 问题。一个变量初次读取的时候值为 A，再一次读取的时候也为 A，那么我们是否能说明这个变量在两次读取中间没有发生过变化？不能。在这期间，变量可能由 A 变为 B，再由 B 变为 A，第二次读取的时候看到的是 A，但实际上这个变量发生了变化。一般的代码逻辑不会在意这个 ABA 问题，因为根据代码逻辑它不会影响并发的安全性，但如果在意的话，可能考虑采用阻塞同步的方式而不是 CAS。实际上 JDK 本身也对这个 ABA 问题解决方案，提供了 <code>AtomicStampedReference</code> 这个类，为变量加上版本来解决 ABA 问题。</p>
+<h1 id="自旋锁">自旋锁</h1>
+<p>以 synchronized 为代表的阻塞同步，因为阻塞线程会恢复线程的操作都需要涉及到操作系统层面的用户态和内核态之间的切换，这对系统的性能影响很大。自旋锁的策略是当线程去获取一个锁时，如果发现该锁已经被其它线程占有，那么它不马上放弃 CPU 的执行时间片，而是进入一个“无意义”的循环，查看该线程是否已经放弃了锁。
+但自旋锁适用于<strong>临界区</strong>比较小的情况，如果锁持有的时间过长，那么自旋操作本身就会白白耗掉系统的性能。</p>
+<p>以下为一个简单的自旋锁实现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> java.util.concurrent.atomic.AtomicReference<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SpinLock</span> <span style="color:#f92672">{</span>
+   <span style="color:#66d9ef">private</span> AtomicReference<span style="color:#f92672">&lt;</span>Thread<span style="color:#f92672">&gt;</span> owner <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicReference<span style="color:#f92672">&lt;</span>Thread<span style="color:#f92672">&gt;();</span>
+   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+       Thread currentThread <span style="color:#f92672">=</span> Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">();</span>
+        <span style="color:#75715e">// 如果锁未被占用，则设置当前线程为锁的拥有者
+</span><span style="color:#75715e"></span>       <span style="color:#66d9ef">while</span> <span style="color:#f92672">(!</span>owner<span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSet</span><span style="color:#f92672">(</span><span style="color:#66d9ef">null</span><span style="color:#f92672">,</span> currentThread<span style="color:#f92672">))</span> <span style="color:#f92672">{}</span>
+   <span style="color:#f92672">}</span>
+
+   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+       Thread currentThread <span style="color:#f92672">=</span> Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">();</span>
+        <span style="color:#75715e">// 只有锁的拥有者才能释放锁
+</span><span style="color:#75715e"></span>       owner<span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSet</span><span style="color:#f92672">(</span>currentThread<span style="color:#f92672">,</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
+   <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>上述的代码中， owner 变量保存获得了锁的线程。这里的自旋锁有一些缺点，第一个是没有保证公平性，等待获取锁的线程之间，无法按先后顺序分别获得锁；另一个，由于多个线程会去操作同一个变量 owner，在 CPU 的系统中，存在着各个 CPU 之间的缓存数据需要同步，保证一致性，这会带来性能问题。</p>
+<h2 id="公平的自旋">公平的自旋</h2>
+<p>为了解决公平性问题，可以让每个锁拥有一个服务号，表示正在服务的线程，而每个线程尝试获取锁之前需要先获取一个排队号，然后不断轮询当前锁的服务号是否是自己的服务号，如果是，则表示获得了锁，否则就继续轮询。下面是一个简单的实现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> java.util.concurrent.atomic.AtomicInteger<span style="color:#f92672">;</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TicketLock</span> <span style="color:#f92672">{</span>
+   <span style="color:#66d9ef">private</span> AtomicInteger serviceNum <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicInteger<span style="color:#f92672">();</span> <span style="color:#75715e">// 服务号
+</span><span style="color:#75715e"></span>   <span style="color:#66d9ef">private</span> AtomicInteger ticketNum <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicInteger<span style="color:#f92672">();</span> <span style="color:#75715e">// 排队号
+</span><span style="color:#75715e"></span>
+   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">lock</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+       <span style="color:#75715e">// 首先原子性地获得一个排队号
+</span><span style="color:#75715e"></span>       <span style="color:#66d9ef">int</span> myTicketNum <span style="color:#f92672">=</span> ticketNum<span style="color:#f92672">.</span><span style="color:#a6e22e">getAndIncrement</span><span style="color:#f92672">();</span>
+       <span style="color:#75715e">// 只要当前服务号不是自己的就不断轮询
+</span><span style="color:#75715e"></span>       <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>serviceNum<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">()</span> <span style="color:#f92672">!=</span> myTicketNum<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+       <span style="color:#f92672">}</span>
+       <span style="color:#66d9ef">return</span> myTicketNum<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> myTicket<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">// 只有当前线程拥有者才能释放锁
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">int</span> next <span style="color:#f92672">=</span> myTicket <span style="color:#f92672">+</span> 1<span style="color:#f92672">;</span>
+        serviceNum<span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSet</span><span style="color:#f92672">(</span>myTicket<span style="color:#f92672">,</span> next<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>虽然解决了公平性的问题，但依然存在前面说的多 CPU 缓存的同步问题，因为每个线程占用的 CPU 都在同时读写同一个变量 serviceNum，这会导致繁重的系统总线流量和内存操作次数，从而降低了系统整体的性能。</p>
+<h2 id="mcs-自旋锁">MCS 自旋锁</h2>
+<p>MCS 的名称来自其发明人的名字：John Mellor-Crummey和Michael Scott。
+MCS 的实现是基于链表的，每个申请锁的线程都是链表上的一个节点，这些线程会一直轮询自己的本地变量，来知道它自己是否获得了锁。已经获得了锁的线程在释放锁的时候，负责通知其它线程，这样 CPU 之间缓存的同步操作就减少了很多，仅在线程通知另外一个线程的时候发生，降低了系统总线和内存的开销。实现如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> java.util.concurrent.atomic.AtomicReferenceFieldUpdater<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCSLock</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCSNode</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">volatile</span> MCSNode next<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">boolean</span> isWaiting <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span> <span style="color:#75715e">// 默认是在等待锁
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">volatile</span> MCSNode queue<span style="color:#f92672">;</span><span style="color:#75715e">// 指向最后一个申请锁的MCSNode
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> AtomicReferenceFieldUpdater<span style="color:#f92672">&lt;</span>MCSLock<span style="color:#f92672">,</span> MCSNode<span style="color:#f92672">&gt;</span> UPDATER <span style="color:#f92672">=</span> AtomicReferenceFieldUpdater
+            <span style="color:#f92672">.</span><span style="color:#a6e22e">newUpdater</span><span style="color:#f92672">(</span>MCSLock<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> MCSNode<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;queue&#34;</span><span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span><span style="color:#f92672">(</span>MCSNode currentThread<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        MCSNode predecessor <span style="color:#f92672">=</span> UPDATER<span style="color:#f92672">.</span><span style="color:#a6e22e">getAndSet</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">,</span> currentThread<span style="color:#f92672">);</span><span style="color:#75715e">// step 1
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>predecessor <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            predecessor<span style="color:#f92672">.</span><span style="color:#a6e22e">next</span> <span style="color:#f92672">=</span> currentThread<span style="color:#f92672">;</span><span style="color:#75715e">// step 2
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span><span style="color:#75715e">// step 3
+</span><span style="color:#75715e"></span>            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// 只有一个线程在使用锁，没有前驱来通知它，所以得自己标记自己已获得锁
+</span><span style="color:#75715e"></span>            currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span><span style="color:#f92672">(</span>MCSNode currentThread<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span><span style="color:#75715e">// 锁拥有者进行释放锁才有意义
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">next</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span><span style="color:#75715e">// 检查是否有人排在自己后面
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>UPDATER<span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSet</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">,</span> currentThread<span style="color:#f92672">,</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">))</span> <span style="color:#f92672">{</span><span style="color:#75715e">// step 4
+</span><span style="color:#75715e"></span>                <span style="color:#75715e">// compareAndSet返回true表示确实没有人排在自己后面
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+                <span style="color:#75715e">// 突然有人排在自己后面了，可能还不知道是谁，下面是等待后续者
+</span><span style="color:#75715e"></span>                <span style="color:#75715e">// 这里之所以要忙等是因为：step 1执行完后，step 2可能还没执行完
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">next</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// step 5
+</span><span style="color:#75715e"></span>                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+        currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">next</span><span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+        currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">next</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span><span style="color:#75715e">// for GC
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>MCS 的能够保证较高的效率，降低不必要的性能消耗，并且它是公平的自旋锁。</p>
+<h2 id="clh-自旋锁">CLH 自旋锁</h2>
+<p>CLH 锁与 MCS 锁的原理大致相同，都是各个线程轮询各自关注的变量，来避免多个线程对同一个变量的轮询，从而从 CPU 缓存一致性的角度上减少了系统的消耗。
+CLH 锁的名字也与他们的发明人的名字相关：Craig，Landin and Hagersten。
+CLH 锁与 MCS 锁最大的不同是，MCS 轮询的是当前队列节点的变量，而 CLH 轮询的是当前节点的前驱节点的变量，来判断前一个线程是否释放了锁。
+实现如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> java.util.concurrent.atomic.AtomicReferenceFieldUpdater<span style="color:#f92672">;</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CLHLock</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CLHNode</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">boolean</span> isWaiting <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span> <span style="color:#75715e">// 默认是在等待锁
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">volatile</span> CLHNode tail <span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> AtomicReferenceFieldUpdater<span style="color:#f92672">&lt;</span>CLHLock<span style="color:#f92672">,</span> CLHNode<span style="color:#f92672">&gt;</span> UPDATER <span style="color:#f92672">=</span> AtomicReferenceFieldUpdater
+            <span style="color:#f92672">.</span> newUpdater<span style="color:#f92672">(</span>CLHLock<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> CLHNode <span style="color:#f92672">.</span><span style="color:#a6e22e">class</span> <span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;tail&#34;</span> <span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span><span style="color:#f92672">(</span>CLHNode currentThread<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        CLHNode preNode <span style="color:#f92672">=</span> UPDATER<span style="color:#f92672">.</span><span style="color:#a6e22e">getAndSet</span><span style="color:#f92672">(</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">,</span> currentThread<span style="color:#f92672">);</span>
+        <span style="color:#66d9ef">if</span><span style="color:#f92672">(</span>preNode <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span><span style="color:#75715e">//已有线程占用了锁，进入自旋
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">while</span><span style="color:#f92672">(</span>preNode<span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span> <span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span><span style="color:#f92672">(</span>CLHNode currentThread<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">// 如果队列里只有当前线程，则释放对当前线程的引用（for GC）。
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>UPDATER <span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSet</span><span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">,</span> currentThread<span style="color:#f92672">,</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// 还有后续线程
+</span><span style="color:#75715e"></span>            currentThread<span style="color:#f92672">.</span><span style="color:#a6e22e">isWaiting</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span> <span style="color:#f92672">;</span><span style="color:#75715e">// 改变状态，让后续线程结束自旋
+</span><span style="color:#75715e"></span>        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>从上面可以看到，MCS 和 CLH 相比，CLH 的代码比 MCS 要少得多；CLH是在前驱节点的属性上自旋，而MCS是在本地属性变量上自旋；CLH的队列是隐式的，通过轮询关注上一个节点的某个变量，隐式地形成了链式的关系，但CLHNode并不实际持有下一个节点，MCS的队列是物理存在的，而 CLH 的队列是逻辑上存在的；此外，CLH 锁释放时只需要改变自己的属性，MCS 锁释放则需要改变后继节点的属性。</p>
+<p>CLH 队列是 J.U.C 中 AQS 框架实现的核心原理。</p>
+<h1 id="参考资料">参考资料</h1>
+<p><a href="https://book.douban.com/subject/24722612/">《深入理解 Java 虚拟机》第二版 - 周志明</a>
+<a href="https://coderbee.net/index.php/concurrent/20131115/577">自旋锁、排队自旋锁、MCS锁、CLH锁</a></p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>作者:</span>
+                <span>beanlam </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>字数:</span>
+                   <span>558</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>分享:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=%2f2018%2fclh-queue%2f&amp;appkey=&amp;title=%e7%ba%bf%e7%a8%8b%e5%ae%89%e5%85%a8%e5%ae%9e%e7%8e%b0%e4%b8%8e%20CLH%20%e9%98%9f%e5%88%97" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                本文采用 <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议 CC BY-NC 4.0</a> 进行许可
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">返回</a></span> · 
+                <span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="/2017/redis-sort-explain/" class="prev" rel="prev" title="redis sort 命令详解"><i class="iconfont icon-dajiantou"></i>&nbsp;redis sort 命令详解</a>
+         
+        
+        <a href="/2018/sync-primitive/" class="next" rel="next" title="操作系统同步原语">操作系统同步原语&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="gitalk-container"></div>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js" crossorigin="anonymous"></script>
+      <script type="text/javascript">
+          var gitalk = new Gitalk({
+              id: '2018-09-05 17:40:29 \u002b0800 CST',
+              title: '线程安全实现与 CLH 队列',
+              clientID: '32dbfef35e6c458d3c26',
+              clientSecret: 'd1a834305aee7be0e1b2be5b18e453b39b850f26',
+              repo: 'blogtalk',
+              owner: 'beanlam',
+              admin: ['beanlam'],
+              body: decodeURI(location.href)
+          });
+          gitalk.render('gitalk-container');
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="https://github.com/gitalk/gitalk">comments powered by gitalk.</a></noscript>
+
+ 
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2015 - 2020</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="/">beanlam</a> | </span>
+         
+
+	 <span>本站由<a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> @ <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a>驱动</span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
